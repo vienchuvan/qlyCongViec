@@ -263,7 +263,7 @@
     async function loadTasksFromAPI() {
       try {
         const response = await fetch(
-          "http://localhost:3000/api/quantri/services/getTasks"
+          "http://http://103.200.23.120/:3000/api/quantri/services/getTasks"
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -288,7 +288,7 @@
     async function loadNVFromAPI() {
       try {
         const response = await fetch(
-          "http://localhost:3000/api/quantri/services/getEmployees"
+          "http://http://103.200.23.120/:3000/api/quantri/services/getEmployees"
         );
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
@@ -541,13 +541,13 @@
         task.completed = !task.completed;
         task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
 
-        fetch(`http://localhost:3000/api/quantri/services/updateTask/${taskId}`, {
+        fetch(`http://http://103.200.23.120/:3000/api/quantri/services/updateTask/${taskId}`, {
           method: "PUT",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            completed: task.completed,
+            completed: task.completed,vi
             status: task.status,
 
             id: task.id,
@@ -582,7 +582,7 @@
     }
     function deleteTask(taskId) {
       if (confirm("Bạn có chắc chắn muốn xóa công việc này?")) {
-        fetch(`http://localhost:3000/api/quantri/services/deleteTask/${taskId}`, {
+        fetch(`http://http://103.200.23.120/:3000/api/quantri/services/deleteTask/${taskId}`, {
           method: "DELETE",
         })
           .then((res) => {
@@ -762,7 +762,7 @@
           notes: formData.get("notes") || "",
         };
 
-        fetch("http://localhost:3000/api/quantri/services/addTask", {
+        fetch("http://http://103.200.23.120/:3000/api/quantri/services/addTask", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
