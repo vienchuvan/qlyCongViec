@@ -63,10 +63,10 @@ router.get("/services/getTasks", async (req, res) => {
 });
 // Thêm task mới
 router.post("/services/addTask", (req, res) => {
-  let   id = Math.floor(Math.random() * 100000);
+  let id = Math.floor(Math.random() * 100000);
   const { name, priority, deadline, kpi, weight, status, completed, notes } = req.body;
   const sql = `INSERT INTO tasks (id,name, priority, deadline, kpi, weight, status, completed, notes) VALUES (?,?, ?, ?, ?, ?, ?, ?, ?)`;
-  db.query(sql, [id,name, priority, deadline, kpi, weight, status, completed, notes], (err, result) => {
+  db.query(sql, [id, name, priority, deadline, kpi, weight, status, completed, notes], (err, result) => {
     if (err) {
       console.log("Lỗi thêm task:", err);
       return res.status(500).json({ error: "Lỗi thêm task" });
@@ -107,5 +107,75 @@ router.delete("/services/deleteTask/:id", (req, res) => {
     return res.json({ message: "Xóa task thành công" });
   });
 });
+
+router.get("/services/getEmployees", async (req, res) => {
+  db.query("SELECT * FROM employees", (err, result) => {
+    if (err) {
+      console.log("Lỗi lấy bài viết, vui lòng thử lại sau");
+      return res
+        .status(404)
+        .json({ error: "Vui lòng thử lại sau !" });
+    }
+    return requestHandler.sendSuccess(res, messages.success)(result);
+  });
+});
+router.post("/services/addEmployee", async (req, res) => {
+  try {
+    const {
+      name,
+      department,
+      position,
+      quality,
+      efficiency,
+      timeliness,
+      creativity,
+      teamwork,
+      attitude,
+      skills,
+      other,
+      notes,
+    } = req.body;
+
+    let id = Math.floor(Math.random() * 100000);
+
+    const sql = `
+      INSERT INTO employees (
+        id, name, department, position,
+        quality, efficiency, timeliness,
+        creativity, teamwork, attitude,
+        skills, other, notes
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const values = [
+      id, name, department, position,
+      quality, efficiency, timeliness,
+      creativity, teamwork, attitude,
+      skills, other, notes,
+    ];
+
+    await db.promise().query(sql, values);
+
+    res.json({ message: "Thêm nhân viên thành công!", id });
+  } catch (err) {
+    console.error("Lỗi khi thêm nhân viên:", err);
+    res.status(500).json({ error: "Thêm nhân viên thất bại." });
+  }
+});
+router.delete("/services/deleteEmployee/:id", (req, res) => {
+  const id = req.params.id;
+  const sql = `DELETE FROM nhân viên WHERE id = ?`;
+  db.query(sql, [id], (err, result) => {
+    if (err) {
+      console.log("Lỗi xóa nhân viên:", err);
+      return res.status(500).json({ error: "Lỗi xóa nhân viên" });
+    }
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Nhân viên không tồn tại" });
+    }
+    return res.json({ message: "Xóa nhân viên thành công" });
+  });
+});
+
 
 module.exports = router;
