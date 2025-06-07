@@ -138,7 +138,7 @@
       </select>
       <button onclick="importExcel()">📥 Import từ Excel</button>
       <button onclick="exportExcel()">📤 Xuất Excel</button>
-      <button onclick="connectChecklist()">🔗 Kết nối Checklist</button>
+      <!-- <button onclick="connectChecklist()">🔗 Kết nối Checklist</button> -->
       <button onclick="showAddEmployeeModal()">➕ Thêm nhân viên</button>
     </div>
     <table id="kpi-table">
@@ -192,10 +192,11 @@
   </div>
 
   <!-- KPI Chart -->
-  <section>
+  <section style="height: 580px;">
     <h2>📈 Biểu đồ phân bố KPI</h2>
     <div style="height: 300px">
-      <canvas id="kpiChart"></canvas>
+      <canvas id="kpiChart" style="    height: 80px !important;
+    width: auto !important;"></canvas>
     </div>
   </section>
 
@@ -388,6 +389,81 @@
       });
     }
 
+
+
+    let kpiChartInstance = null;
+
+    // Hàm vẽ biểu đồ phân bố KPI
+    function renderKPIChart() {
+      const ctx = document.getElementById('kpiChart').getContext('2d');
+      // Tính toán tổng KPI cho từng nhân viên
+      const labels = employees.map(emp => emp.name);
+      const data = employees.map(emp => {
+        return (
+          (parseFloat(emp.quality) +
+            parseFloat(emp.efficiency) +
+            parseFloat(emp.timeliness) +
+            parseFloat(emp.creativity) +
+            parseFloat(emp.teamwork) +
+            parseFloat(emp.attitude) +
+            parseFloat(emp.skills) +
+            parseFloat(emp.other)) / 8
+        ).toFixed(1);
+      });
+
+      // Nếu đã có chart thì hủy trước khi vẽ lại
+      if (kpiChartInstance) {
+        kpiChartInstance.destroy();
+      }
+
+      kpiChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Tổng KPI',
+            data: data,
+            backgroundColor: 'rgba(46, 204, 113, 0.7)',
+            borderColor: 'rgba(39, 174, 96, 1)',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            title: {
+              display: false
+            },
+            tooltip: {
+              callbacks: {
+                label: function (context) {
+                  return `Tổng KPI: ${context.parsed.y}`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              max: 10,
+              title: {
+                display: true,
+                text: 'KPI Trung bình'
+              }
+            },
+            x: {
+              title: {
+                display: true,
+                text: 'Nhân viên'
+              }
+            }
+          }
+        }
+      });
+    }
+
+
     // Render employees table
     function renderEmployees() {
       const tbody = document.getElementById("employeeTableBody");
@@ -446,9 +522,9 @@
           tbody.appendChild(row);
         }
       });
+      renderKPIChart();
     }
 
-    // Modal functions
     function showAddTaskModal() {
       document.getElementById("addTaskModal").style.display = "block";
     }
@@ -459,14 +535,49 @@
       document.getElementById(modalId).style.display = "none";
     }
 
-    // Task functions
     function toggleTask(taskId) {
       const task = tasks.find((t) => t.id === taskId);
       if (task) {
         task.completed = !task.completed;
         task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
-        updateDashboard();
-        renderTasks();
+
+        fetch(`http://localhost:3000/api/quantri/services/updateTask/${taskId}`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            completed: task.completed,
+            status: task.status,
+
+            id: task.id,
+            name: task.name,
+            priority: task.priority,
+            deadline: task.deadline,
+            kpi: task.kpi,
+            weight: task.weight,
+            notes: task.notes,
+          }),
+        })
+          .then((res) => {
+            if (!res.ok) {
+              throw new Error("Lỗi khi cập nhật trạng thái task");
+            }
+            return res.json();
+          })
+          .then((data) => {
+            // Sau khi cập nhật thành công, làm mới dữ liệu
+            loadTasksFromAPI();
+            updateDashboard();
+          })
+          .catch((err) => {
+            console.error("Lỗi cập nhật task:", err);
+            alert("Không thể cập nhật trạng thái task. Vui lòng thử lại.");
+            // Nếu lỗi, đảo lại trạng thái cũ
+            task.completed = !task.completed;
+            task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
+            renderTasks();
+          });
       }
     }
     function deleteTask(taskId) {
@@ -501,43 +612,134 @@
 
     // Placeholder functions
     function downloadReport() {
-  // Chuẩn bị dữ liệu cho Excel
-  const data = [
-    [
-      "STT",
-      "Công việc",
-      "Ưu tiên",
-      "Hạn chót",
-      "KPI",
-      "Trọng số (%)",
-      "Trạng thái",
-      "Ghi chú",
-    ],
-    ...tasks.map((task, idx) => [
-      idx + 1,
-      task.name,
-      task.priority,
-      new Date(task.deadline).toLocaleString("vi-VN"),
-      task.kpi,
-      task.weight,
-      task.status,
-      task.notes || "",
-    ]),
-  ];
+      const data = [
+        [
+          "STT",
+          "Công việc",
+          "Ưu tiên",
+          "Hạn chót",
+          "KPI",
+          "Trọng số (%)",
+          "Trạng thái",
+          "Ghi chú",
+        ],
+        ...tasks.map((task, idx) => [
+          idx + 1,
+          task.name,
+          task.priority,
+          new Date(task.deadline).toLocaleString("vi-VN"),
+          task.kpi,
+          task.weight,
+          task.status,
+          task.notes || "",
+        ]),
+      ];
 
-  // Tạo worksheet và workbook
-  const ws = XLSX.utils.aoa_to_sheet(data);
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, "CongViec");
+      // Tạo worksheet và workbook
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "CongViec");
 
-  // Xuất file
-  XLSX.writeFile(wb, "BaoCao_CongViec.xlsx");
-}
+      // Xuất file
+      XLSX.writeFile(wb, "BaoCao_CongViec.xlsx");
+    }
     function importExcel() {
-      alert("Chức năng đang phát triển!");
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".xlsx,.xls";
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const data = new Uint8Array(evt.target.result);
+          const workbook = XLSX.read(data, { type: "array" });
+          const sheetName = workbook.SheetNames[0];
+          const sheet = workbook.Sheets[sheetName];
+          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+          employees = rows.slice(1).filter(r => r.length >= 4).map((row, idx) => ({
+            id: Date.now() + idx,
+            name: row[1] || "",
+            department: row[2] || "",
+            position: row[3] || "",
+            quality: parseFloat(row[4]) || 0,
+            efficiency: parseFloat(row[5]) || 0,
+            timeliness: parseFloat(row[6]) || 0,
+            creativity: parseFloat(row[7]) || 0,
+            teamwork: parseFloat(row[8]) || 0,
+            attitude: parseFloat(row[9]) || 0,
+            skills: parseFloat(row[10]) || 0,
+            other: parseFloat(row[11]) || 0,
+            notes: row[14] || ""
+          }));
+          renderEmployees();
+          alert("Import thành công!");
+        };
+        reader.readAsArrayBuffer(file);
+      };
+      input.click();
     }
     function exportExcel() {
-      alert("Chức năng đang phát triển!");
+      const data = [
+        [
+          "STT",
+          "Tên",
+          "Phòng ban",
+          "Vị trí",
+          "Chất lượng",
+          "Hiệu suất",
+          "Đúng hạn",
+          "Sáng tạo",
+          "Làm việc nhóm",
+          "Thái độ",
+          "Kỹ năng",
+          "Khác",
+          "Tổng KPI",
+          "Xếp loại",
+          "Ghi chú"
+        ],
+        ...employees.map((emp, idx) => {
+          const totalKPI = (
+            (parseFloat(emp.quality) +
+              parseFloat(emp.efficiency) +
+              parseFloat(emp.timeliness) +
+              parseFloat(emp.creativity) +
+              parseFloat(emp.teamwork) +
+              parseFloat(emp.attitude) +
+              parseFloat(emp.skills) +
+              parseFloat(emp.other)) / 8
+          ).toFixed(1);
+
+          let ratingText = "Cần cải thiện";
+          if (totalKPI >= 9) ratingText = "Xuất sắc";
+          else if (totalKPI >= 8) ratingText = "Tốt";
+          else if (totalKPI >= 7) ratingText = "Trung bình";
+
+          return [
+            idx + 1,
+            emp.name,
+            emp.department,
+            emp.position,
+            emp.quality,
+            emp.efficiency,
+            emp.timeliness,
+            emp.creativity,
+            emp.teamwork,
+            emp.attitude,
+            emp.skills,
+            emp.other,
+            totalKPI,
+            ratingText,
+            emp.notes || ""
+          ];
+        })
+      ];
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "KPI_NhanVien");
+
+      XLSX.writeFile(wb, "BaoCao_KPI_NhanVien.xlsx");
     }
     function connectChecklist() {
       alert("Chức năng đang phát triển!");
@@ -612,7 +814,6 @@
         e.target.reset();
       });
 
-    // Close modals when clicking outside
     window.addEventListener("click", function (e) {
       if (e.target.classList.contains("modal")) {
         e.target.style.display = "none";
