@@ -1,508 +1,583 @@
 <!DOCTYPE html>
 <html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>KPI Checklist Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KPI Checklist Dashboard</title>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <body>
+    <div class="loading">Đang tải...</div>
+    <section class="header">
+      <div class="menu-toggle" id="menu-toggle">&#9776;</div>
+      <ul class="menu" id="menu">
+        <li class="li1">KPI</li>
+        <li class="li2">Công Việc</li>
+        <li class="li3">Theo dõi KPI</li>
+        <li class="li4">Biểu đồ</li>
+      </ul>
+      <button class="login-btn">Đăng nhập</button>
+    </section>
 
-</head>
+    <div id="loginModal" class="modal" aria-hidden="true">
+      <div class="modal-content" >
+        <h2>Đăng Nhập</h2>
+        <form id="loginForm" style="margin-top: 5vh;">
+          <input type="text" name="username" required placeholder="Nhập tên đăng nhập..." />
+          <input type="password" name="password" required placeholder="Nhập mật khẩu..." />
+          <div class="modal-buttons">
+            <button type="button" class="close-btn" onclick="closeModal('loginModal')">Hủy</button>
+            <button type="submit">Đăng Nhập</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
-<body>
-  <div class="loading">Đang tải...</div>
 
-  <section>
-    <h1>📊 KPI CHECKLIST DASHBOARD</h1>
-    <p>Theo dõi hiệu suất và tiến độ công việc</p>
-    <div style="
+    <section>
+      <h1>📊 KPI CHECKLIST DASHBOARD</h1>
+      <p>Theo dõi hiệu suất và tiến độ công việc</p>
+      <div
+        style="
           display: grid;
           grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
           gap: 15px;
-        ">
-      <div class="card">
-        <h3>Tổng số công việc</h3>
-        <p id="totalTasks">0</p>
-        <span>Ổn định</span>
+        "
+      >
+        <div class="card">
+          <h3>Tổng số công việc</h3>
+          <p id="totalTasks">0</p>
+          <span>Ổn định</span>
+        </div>
+        <div class="card">
+          <h3>Hoàn thành</h3>
+          <p id="completedTasks">0 (0%)</p>
+        </div>
+        <div class="card">
+          <h3>Đang thực hiện</h3>
+          <p id="inProgressTasks">0 (0%)</p>
+        </div>
+        <div class="card">
+          <h3>Quá hạn</h3>
+          <p id="overdueTasks">0 (0%)</p>
+        </div>
+        <div class="card">
+          <h3>Điểm KPI trung bình</h3>
+          <p id="averageKPI">0</p>
+        </div>
       </div>
-      <div class="card">
-        <h3>Hoàn thành</h3>
-        <p id="completedTasks">0 (0%)</p>
-      </div>
-      <div class="card">
-        <h3>Đang thực hiện</h3>
-        <p id="inProgressTasks">0 (0%)</p>
-      </div>
-      <div class="card">
-        <h3>Quá hạn</h3>
-        <p id="overdueTasks">0 (0%)</p>
-      </div>
-      <div class="card">
-        <h3>Điểm KPI trung bình</h3>
-        <p id="averageKPI">0</p>
-      </div>
-    </div>
-  </section>
+    </section>
 
-  <section>
-    <h2>🎯 Quản lý công việc & KPI</h2>
-    <div class="filter-section">
-      <label>Lọc theo:</label>
-      <select id="filterStatus" onchange="filterTasks()">
-        <option value="all">Tất cả</option>
-        <option value="Đang thực hiện">Đang thực hiện</option>
-        <option value="Hoàn thành">Hoàn thành</option>
-        <option value="Quá hạn">Quá hạn</option>
-      </select>
-      <label>Ưu tiên:</label>
-      <select id="filterPriority" onchange="filterTasks()">
-        <option value="all">Tất cả</option>
-        <option value="Cao">Cao</option>
-        <option value="Trung bình">Trung bình</option>
-        <option value="Thấp">Thấp</option>
-      </select>
-      <button onclick="downloadReport()">📥 Tải báo cáo</button>
-    </div>
-    <table>
-      <thead>
-        <tr>
-          <th>STT</th>
-          <th>✓</th>
-          <th>Công việc</th>
-          <th>Ưu tiên</th>
-          <th>Hạn chót</th>
-          <th>KPI</th>
-          <th>Trọng số (%)</th>
-          <th>Trạng thái</th>
-          <th>Hành động</th>
-        </tr>
-      </thead>
-      <tbody id="taskTableBody"></tbody>
-    </table>
-    <!-- Nút Thêm công việc mới -->
-    <button class="add-task-btn" onclick="showAddTaskModal()">
-      ➕ Thêm công việc mới
-    </button>
-  </section>
-
-  <!-- Modal Thêm công việc mới -->
-  <div id="addTaskModal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <h2>Thêm công việc mới</h2>
-      <form id="addTaskForm">
-        <label>Tên công việc:</label>
-        <input type="text" name="name" required placeholder="Nhập tên công việc..." />
+    <section>
+      <h2>🎯 Quản lý công việc & KPI</h2>
+      <div class="filter-section">
+        <label>Lọc theo:</label>
+        <select id="filterStatus" onchange="filterTasks()">
+          <option value="all">Tất cả</option>
+          <option value="Đang thực hiện">Đang thực hiện</option>
+          <option value="Hoàn thành">Hoàn thành</option>
+          <option value="Quá hạn">Quá hạn</option>
+        </select>
         <label>Ưu tiên:</label>
-        <select name="priority">
+        <select id="filterPriority" onchange="filterTasks()">
+          <option value="all">Tất cả</option>
           <option value="Cao">Cao</option>
           <option value="Trung bình">Trung bình</option>
           <option value="Thấp">Thấp</option>
         </select>
-        <label>Hạn chót:</label>
-        <input type="datetime-local" name="deadline" required />
-        <label>KPI:</label>
-        <input type="number" name="kpi" min="0" max="10" step="0.1" required placeholder="0-10" />
-        <label>Trọng số (%):</label>
-        <input type="number" name="weight" min="1" max="100" required placeholder="1-100" />
-        <label>Ghi chú:</label>
-        <textarea name="notes" rows="3" placeholder="Ghi chú thêm..."></textarea>
-        <div class="modal-buttons">
-          <button type="button" class="close-btn" onclick="closeModal('addTaskModal')">
-            Hủy
-          </button>
-          <button type="submit">Thêm</button>
-        </div>
-      </form>
-    </div>
-  </div>
+        <button onclick="downloadReport()">📥 Tải báo cáo</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>✓</th>
+            <th>Công việc</th>
+            <th>Ưu tiên</th>
+            <th>Hạn chót</th>
+            <th>KPI</th>
+            <th>Trọng số (%)</th>
+            <th>Trạng thái</th>
+            <th>Hành động</th>
+          </tr>
+        </thead>
+        <tbody id="taskTableBody"></tbody>
+      </table>
+      <!-- Nút Thêm công việc mới -->
+      <button class="add-task-btn" onclick="showAddTaskModal()">
+        ➕ Thêm công việc mới
+      </button>
+    </section>
 
-  <!-- Employee KPI Tracking -->
-  <section>
-    <h2>📊 BẢNG THEO DÕI CHẤM KPI</h2>
-    <div>
-      <label>Kỳ đánh giá:</label>
-      <select id="evaluation-period">
-        <option value="Q2/2025">Q2/2025</option>
-        <option value="Q1/2025">Q1/2025</option>
-        <option value="Q4/2024">Q4/2024</option>
-      </select>
-      <label>Phòng ban:</label>
-      <select id="department-filter">
-        <option value="Tất cả">Tất cả</option>
-        <option value="IT">IT</option>
-        <option value="Sales">Sales</option>
-        <option value="Marketing">Marketing</option>
-        <option value="HR">HR</option>
-      </select>
-      <button onclick="importExcel()">📥 Import từ Excel</button>
-      <button onclick="exportExcel()">📤 Xuất Excel</button>
-      <!-- <button onclick="connectChecklist()">🔗 Kết nối Checklist</button> -->
-      <button onclick="showAddEmployeeModal()">➕ Thêm nhân viên</button>
+    <!-- Modal Thêm công việc mới -->
+    <div id="addTaskModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Thêm công việc mới</h2>
+        <form id="addTaskForm">
+          <label>Tên công việc:</label>
+          <input
+            type="text"
+            name="name"
+            required
+            placeholder="Nhập tên công việc..."
+          />
+          <label>Ưu tiên:</label>
+          <select name="priority">
+            <option value="Cao">Cao</option>
+            <option value="Trung bình">Trung bình</option>
+            <option value="Thấp">Thấp</option>
+          </select>
+          <label>Hạn chót:</label>
+          <input type="datetime-local" name="deadline" required />
+          <label>KPI:</label>
+          <input
+            type="number"
+            name="kpi"
+            min="0"
+            max="10"
+            step="0.1"
+            required
+            placeholder="0-10"
+          />
+          <label>Trọng số (%):</label>
+          <input
+            type="number"
+            name="weight"
+            min="1"
+            max="100"
+            required
+            placeholder="1-100"
+          />
+          <label>Ghi chú:</label>
+          <textarea
+            name="notes"
+            rows="3"
+            placeholder="Ghi chú thêm..."
+          ></textarea>
+          <div class="modal-buttons">
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('addTaskModal')"
+            >
+              Hủy
+            </button>
+            <button type="submit">Thêm</button>
+          </div>
+        </form>
+      </div>
     </div>
-    <table id="kpi-table">
-      <thead>
-        <tr>
-          <th>STT</th>
-          <th>Tên</th>
-          <th>Phòng ban</th>
-          <th>Vị trí</th>
-          <th>Chất lượng</th>
-          <th>Hiệu suất</th>
-          <th>Đúng hạn</th>
-          <th>Sáng tạo</th>
-          <th>Làm việc nhóm</th>
-          <th>Thái độ</th>
-          <th>Kỹ năng</th>
-          <th>Khác</th>
-          <th>Tổng KPI</th>
-          <th>Xếp loại</th>
-          <th>Ghi chú</th>
-        </tr>
-      </thead>
-      <tbody id="employeeTableBody"></tbody>
-    </table>
-  </section>
 
-  <!-- Modal Thêm nhân viên mới -->
-  <div id="addEmployeeModal" class="modal" aria-hidden="true">
-    <div class="modal-content">
-      <h2>Thêm nhân viên mới</h2>
-      <form id="addEmployeeForm">
-        <label>Tên nhân viên:</label>
-        <input type="text" name="name" required placeholder="Nhập tên nhân viên..." />
+    <!-- Employee KPI Tracking -->
+    <section>
+      <h2>📊 BẢNG THEO DÕI CHẤM KPI</h2>
+      <div>
+        <label>Kỳ đánh giá:</label>
+        <select id="evaluation-period">
+          <option value="Q2/2025">Q2/2025</option>
+          <option value="Q1/2025">Q1/2025</option>
+          <option value="Q4/2024">Q4/2024</option>
+        </select>
         <label>Phòng ban:</label>
-        <select name="department">
+        <select id="department-filter">
+          <option value="Tất cả">Tất cả</option>
           <option value="IT">IT</option>
           <option value="Sales">Sales</option>
           <option value="Marketing">Marketing</option>
           <option value="HR">HR</option>
         </select>
-        <label>Vị trí:</label>
-        <input type="text" name="position" required placeholder="Nhập vị trí..." />
-        <div class="modal-buttons">
-          <button type="button" class="close-btn" onclick="closeModal('addEmployeeModal')">
-            Hủy
-          </button>
-          <button type="submit">Thêm</button>
-        </div>
-      </form>
+        <button onclick="importExcel()">📥 Import từ Excel</button>
+        <button onclick="exportExcel()">📤 Xuất Excel</button>
+        <!-- <button onclick="connectChecklist()">🔗 Kết nối Checklist</button> -->
+        <button onclick="showAddEmployeeModal()">➕ Thêm nhân viên</button>
+      </div>
+      <table id="kpi-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Tên</th>
+            <th>Phòng ban</th>
+            <th>Vị trí</th>
+            <th>Chất lượng</th>
+            <th>Hiệu suất</th>
+            <th>Đúng hạn</th>
+            <th>Sáng tạo</th>
+            <th>Làm việc nhóm</th>
+            <th>Thái độ</th>
+            <th>Kỹ năng</th>
+            <th>Khác</th>
+            <th>Tổng KPI</th>
+            <th>Xếp loại</th>
+            <th>Ghi chú</th>
+          </tr>
+        </thead>
+        <tbody id="employeeTableBody"></tbody>
+      </table>
+    </section>
+
+    <!-- Modal Thêm nhân viên mới -->
+    <div id="addEmployeeModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Thêm nhân viên mới</h2>
+        <form id="addEmployeeForm">
+          <label>Tên nhân viên:</label>
+          <input
+            type="text"
+            name="name"
+            required
+            placeholder="Nhập tên nhân viên..."
+          />
+          <label>Phòng ban:</label>
+          <select name="department">
+            <option value="IT">IT</option>
+            <option value="Sales">Sales</option>
+            <option value="Marketing">Marketing</option>
+            <option value="HR">HR</option>
+          </select>
+          <label>Vị trí:</label>
+          <input
+            type="text"
+            name="position"
+            required
+            placeholder="Nhập vị trí..."
+          />
+          <div class="modal-buttons">
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('addEmployeeModal')"
+            >
+              Hủy
+            </button>
+            <button type="submit">Thêm</button>
+          </div>
+        </form>
+      </div>
     </div>
-  </div>
 
-  <!-- KPI Chart -->
-  <section style="height: 580px;">
-    <h2>📈 Biểu đồ phân bố KPI</h2>
-    <div style="height: 300px">
-      <canvas id="kpiChart" style="    height: 80px !important;
-    width: auto !important;"></canvas>
-    </div>
-  </section>
+    <!-- KPI Chart -->
+    <section style="height: 580px">
+      <h2>📈 Biểu đồ phân bố KPI</h2>
+      <div style="height: 300px">
+        <canvas
+          id="kpiChart"
+          style="height: 80px !important; width: auto !important"
+        ></canvas>
+      </div>
+    </section>
 
-  <script>
-    // Global variables
-    let tasks = [];
-    let employees = [];
-
-    // Initialize the application
-    document.addEventListener("DOMContentLoaded", function () {
-      loadTasksFromAPI();
-      loadNVFromAPI();
-      updateDashboard();
-      renderTasks();
-      renderEmployees();
-    });
-
-    // Load sample data
-    function loadSampleData() {
-      tasks = [
-        {
-          id: 1,
-          name: "Phát triển tính năng mới",
-          priority: "Cao",
-          deadline: "2025-06-15T18:00",
-          kpi: 8.5,
-          weight: 30,
-          status: "Đang thực hiện",
-          completed: false,
-          notes: "Ưu tiên cao",
-        },
-        {
-          id: 2,
-          name: "Báo cáo tháng",
-          priority: "Trung bình",
-          deadline: "2025-06-10T17:00",
-          kpi: 7.2,
-          weight: 20,
-          status: "Hoàn thành",
-          completed: true,
-          notes: "Đã hoàn thành đúng hạn",
-        },
-      ];
-
-      employees = [
-        {
-          id: 1,
-          name: "Nguyễn Văn A",
-          department: "IT",
-          position: "Developer",
-          quality: 8.5,
-          efficiency: 7.8,
-          timeliness: 9.2,
-          creativity: 7.5,
-          teamwork: 8.0,
-          attitude: 8.8,
-          skills: 8.2,
-          other: 7.9,
-          notes: "Hiệu suất tốt",
-        },
-      ];
-    }
-
-    async function loadTasksFromAPI() {
-      try {
-        const response = await fetch(
-          "http://http://103.200.23.120/:3000/api/quantri/services/getTasks"
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const encrypted = decrypt(result);
-        console.log("Decrypted tasks:", encrypted);
-
-        // Giả sử API trả về: { success: true, data: [...] }
-        tasks = encrypted.data || []; // Chỉ gán nếu data là array
-
+    <script>
+      // Global variables
+      let tasks = [];
+      let employees = [];
+      let api = "http://103.200.23.120:3000/api/quantri/services/";
+      // Initialize the application
+      document.addEventListener("DOMContentLoaded", function () {
+        loadTasksFromAPI();
+        loadNVFromAPI();
         updateDashboard();
         renderTasks();
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-        alert("Không thể tải dữ liệu công việc từ API!");
-      }
-    }
-
-
-    async function loadNVFromAPI() {
-      try {
-        const response = await fetch(
-          "http://http://103.200.23.120/:3000/api/quantri/services/getEmployees"
-        );
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const result = await response.json();
-        const encrypted = decrypt(result);
-        console.log("Decrypted tasks:", encrypted);
-
-        // Giả sử API trả về: { success: true, data: [...] }
-        employees = encrypted.data || []; // Chỉ gán nếu data là array
         renderEmployees();
-      } catch (error) {
-        console.error("Error fetching tasks:", error);
-        alert("Không thể tải dữ liệu công việc từ API!");
+      });
+      document.querySelector(".login-btn").addEventListener("click", function () {
+  document.getElementById("loginModal").style.display = "block";
+});
+      // Load sample data
+      function loadSampleData() {
+        tasks = [
+          {
+            id: 1,
+            name: "Phát triển tính năng mới",
+            priority: "Cao",
+            deadline: "2025-06-15T18:00",
+            kpi: 8.5,
+            weight: 30,
+            status: "Đang thực hiện",
+            completed: false,
+            notes: "Ưu tiên cao",
+          },
+          {
+            id: 2,
+            name: "Báo cáo tháng",
+            priority: "Trung bình",
+            deadline: "2025-06-10T17:00",
+            kpi: 7.2,
+            weight: 20,
+            status: "Hoàn thành",
+            completed: true,
+            notes: "Đã hoàn thành đúng hạn",
+          },
+        ];
+
+        employees = [
+          {
+            id: 1,
+            name: "Nguyễn Văn A",
+            department: "IT",
+            position: "Developer",
+            quality: 8.5,
+            efficiency: 7.8,
+            timeliness: 9.2,
+            creativity: 7.5,
+            teamwork: 8.0,
+            attitude: 8.8,
+            skills: 8.2,
+            other: 7.9,
+            notes: "Hiệu suất tốt",
+          },
+        ];
       }
-    }
-    // Update dashboard statistics
-    function updateDashboard() {
-      const totalTasks = tasks.length;
-      const completedTasks = tasks.filter((t) => t.completed).length;
-      const inProgressTasks = tasks.filter(
-        (t) => t.status === "Đang thực hiện"
-      ).length;
-      const overdueTasks = tasks.filter((t) => t.status === "Quá hạn").length;
-      const averageKPI =
-        tasks.length > 0
-          ? (tasks.reduce((sum, t) => sum + parseFloat(t.kpi), 0) / tasks.length).toFixed(
-            1
-          )
-          : 0;
 
-      document.getElementById("totalTasks").textContent = totalTasks;
-      document.getElementById(
-        "completedTasks"
-      ).textContent = `${completedTasks} (${Math.round((completedTasks / totalTasks) * 100) || 0
-      }%)`;
-      document.getElementById(
-        "inProgressTasks"
-      ).textContent = `${inProgressTasks} (${Math.round((inProgressTasks / totalTasks) * 100) || 0
-      }%)`;
-      document.getElementById(
-        "overdueTasks"
-      ).textContent = `${overdueTasks} (${Math.round((overdueTasks / totalTasks) * 100) || 0
-      }%)`;
-      document.getElementById("averageKPI").textContent = averageKPI;
-    }
+      async function loadTasksFromAPI() {
+        try {
+          const response = await fetch(api + "getTasks");
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
 
-    // Render tasks table
-    function renderTasks() {
-      const tbody = document.getElementById("taskTableBody");
-      tbody.innerHTML = "";
+          const result = await response.json();
+          const encrypted = decrypt(result);
+          console.log("Decrypted tasks:", encrypted);
 
-      // Lọc theo trạng thái và ưu tiên
-      const filterStatus = document.getElementById("filterStatus").value;
-      const filterPriority = document.getElementById("filterPriority").value;
+          // Giả sử API trả về: { success: true, data: [...] }
+          tasks = encrypted.data || []; // Chỉ gán nếu data là array
 
-      tasks.forEach((task, index) => {
-        if (
-          (filterStatus === "all" || task.status === filterStatus) &&
-          (filterPriority === "all" || task.priority === filterPriority)
-        ) {
-          const row = document.createElement("tr");
-          const priorityClass =
-            task.priority === "Cao"
-              ? "high"
-              : task.priority === "Trung bình"
+          updateDashboard();
+          renderTasks();
+        } catch (error) {
+          console.error("Error fetching tasks:", error);
+          alert("Không thể tải dữ liệu công việc từ API!");
+        }
+      }
+
+      async function loadNVFromAPI() {
+        try {
+          const response = await fetch(api + "getEmployees");
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
+
+          const result = await response.json();
+          const encrypted = decrypt(result);
+          console.log("Decrypted tasks:", encrypted);
+
+          // Giả sử API trả về: { success: true, data: [...] }
+          employees = encrypted.data || []; // Chỉ gán nếu data là array
+          renderEmployees();
+        } catch (error) {
+          console.error("Error fetching tasks:", error);
+          alert("Không thể tải dữ liệu công việc từ API!");
+        }
+      }
+      // Update dashboard statistics
+      function updateDashboard() {
+        const totalTasks = tasks.length;
+        const completedTasks = tasks.filter((t) => t.completed).length;
+        const inProgressTasks = tasks.filter(
+          (t) => t.status === "Đang thực hiện"
+        ).length;
+        const overdueTasks = tasks.filter((t) => t.status === "Quá hạn").length;
+        const averageKPI =
+          tasks.length > 0
+            ? (
+                tasks.reduce((sum, t) => sum + parseFloat(t.kpi), 0) /
+                tasks.length
+              ).toFixed(1)
+            : 0;
+
+        document.getElementById("totalTasks").textContent = totalTasks;
+        document.getElementById(
+          "completedTasks"
+        ).textContent = `${completedTasks} (${
+          Math.round((completedTasks / totalTasks) * 100) || 0
+        }%)`;
+        document.getElementById(
+          "inProgressTasks"
+        ).textContent = `${inProgressTasks} (${
+          Math.round((inProgressTasks / totalTasks) * 100) || 0
+        }%)`;
+        document.getElementById(
+          "overdueTasks"
+        ).textContent = `${overdueTasks} (${
+          Math.round((overdueTasks / totalTasks) * 100) || 0
+        }%)`;
+        document.getElementById("averageKPI").textContent = averageKPI;
+      }
+
+      // Render tasks table
+      function renderTasks() {
+        const tbody = document.getElementById("taskTableBody");
+        tbody.innerHTML = "";
+
+        // Lọc theo trạng thái và ưu tiên
+        const filterStatus = document.getElementById("filterStatus").value;
+        const filterPriority = document.getElementById("filterPriority").value;
+
+        tasks.forEach((task, index) => {
+          if (
+            (filterStatus === "all" || task.status === filterStatus) &&
+            (filterPriority === "all" || task.priority === filterPriority)
+          ) {
+            const row = document.createElement("tr");
+            const priorityClass =
+              task.priority === "Cao"
+                ? "high"
+                : task.priority === "Trung bình"
                 ? "medium"
                 : "low";
-          const statusClass =
-            task.status === "Hoàn thành"
-              ? "completed"
-              : task.status === "Đang thực hiện"
+            const statusClass =
+              task.status === "Hoàn thành"
+                ? "completed"
+                : task.status === "Đang thực hiện"
                 ? "in-progress"
                 : "overdue";
 
-          row.innerHTML = `
+            row.innerHTML = `
                         <td>${index + 1}</td>
-                        <td><input type="checkbox" ${task.completed ? "checked" : ""
-            } onchange="toggleTask(${task.id})"></td>
+                        <td><input type="checkbox" ${
+                          task.completed ? "checked" : ""
+                        } onchange="toggleTask(${task.id})"></td>
                         <td>${task.name}</td>
-                        <td><span class="priority-badge priority-${priorityClass}">${task.priority
+                        <td><span class="priority-badge priority-${priorityClass}">${
+              task.priority
             }</span></td>
                         <td>${new Date(task.deadline).toLocaleString(
-              "vi-VN"
-            )}</td>
+                          "vi-VN"
+                        )}</td>
                         <td>${task.kpi}</td>
                         <td>${task.weight}%</td>
-                        <td><span class="status-badge status-${statusClass}">${task.status
+                        <td><span class="status-badge status-${statusClass}">${
+              task.status
             }</span></td>
                         <td>
-                            <button onclick="deleteTask(${task.id
-            })" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
+                            <button onclick="deleteTask(${
+                              task.id
+                            })" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
                         </td>
                     `;
-          tbody.appendChild(row);
-        }
-      });
-    }
-
-
-
-    let kpiChartInstance = null;
-
-    // Hàm vẽ biểu đồ phân bố KPI
-    function renderKPIChart() {
-      const ctx = document.getElementById('kpiChart').getContext('2d');
-      // Tính toán tổng KPI cho từng nhân viên
-      const labels = employees.map(emp => emp.name);
-      const data = employees.map(emp => {
-        return (
-          (parseFloat(emp.quality) +
-            parseFloat(emp.efficiency) +
-            parseFloat(emp.timeliness) +
-            parseFloat(emp.creativity) +
-            parseFloat(emp.teamwork) +
-            parseFloat(emp.attitude) +
-            parseFloat(emp.skills) +
-            parseFloat(emp.other)) / 8
-        ).toFixed(1);
-      });
-
-      // Nếu đã có chart thì hủy trước khi vẽ lại
-      if (kpiChartInstance) {
-        kpiChartInstance.destroy();
+            tbody.appendChild(row);
+          }
+        });
       }
 
-      kpiChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-          labels: labels,
-          datasets: [{
-            label: 'Tổng KPI',
-            data: data,
-            backgroundColor: 'rgba(46, 204, 113, 0.7)',
-            borderColor: 'rgba(39, 174, 96, 1)',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            legend: { display: false },
-            title: {
-              display: false
-            },
-            tooltip: {
-              callbacks: {
-                label: function (context) {
-                  return `Tổng KPI: ${context.parsed.y}`;
-                }
-              }
-            }
-          },
-          scales: {
-            y: {
-              beginAtZero: true,
-              max: 10,
-              title: {
-                display: true,
-                text: 'KPI Trung bình'
-              }
-            },
-            x: {
-              title: {
-                display: true,
-                text: 'Nhân viên'
-              }
-            }
-          }
-        }
-      });
-    }
+      let kpiChartInstance = null;
 
-
-    // Render employees table
-    function renderEmployees() {
-      const tbody = document.getElementById("employeeTableBody");
-      tbody.innerHTML = "";
-
-      const filterDepartment =
-        document.getElementById("department-filter").value;
-
-      employees.forEach((employee, index) => {
-        if (
-          filterDepartment === "Tất cả" ||
-          employee.department === filterDepartment
-        ) {
-          const totalKPI = (
-            (parseFloat(employee.quality) +
-              parseFloat(employee.efficiency) +
-              parseFloat(employee.timeliness) +
-              parseFloat(employee.creativity) +
-              parseFloat(employee.teamwork) +
-              parseFloat(employee.attitude) +
-              parseFloat(employee.skills) +
-              parseFloat(employee.other)) / 8
+      // Hàm vẽ biểu đồ phân bố KPI
+      function renderKPIChart() {
+        const ctx = document.getElementById("kpiChart").getContext("2d");
+        // Tính toán tổng KPI cho từng nhân viên
+        const labels = employees.map((emp) => emp.name);
+        const data = employees.map((emp) => {
+          return (
+            (parseFloat(emp.quality) +
+              parseFloat(emp.efficiency) +
+              parseFloat(emp.timeliness) +
+              parseFloat(emp.creativity) +
+              parseFloat(emp.teamwork) +
+              parseFloat(emp.attitude) +
+              parseFloat(emp.skills) +
+              parseFloat(emp.other)) /
+            8
           ).toFixed(1);
+        });
 
-          let rating = "needs-improvement";
-          let ratingText = "Cần cải thiện";
-          if (totalKPI >= 9) {
-            rating = "excellent";
-            ratingText = "Xuất sắc";
-          } else if (totalKPI >= 8) {
-            rating = "good";
-            ratingText = "Tốt";
-          } else if (totalKPI >= 7) {
-            rating = "average";
-            ratingText = "Trung bình";
-          }
+        // Nếu đã có chart thì hủy trước khi vẽ lại
+        if (kpiChartInstance) {
+          kpiChartInstance.destroy();
+        }
 
-          const row = document.createElement("tr");
-          row.innerHTML = `
+        kpiChartInstance = new Chart(ctx, {
+          type: "bar",
+          data: {
+            labels: labels,
+            datasets: [
+              {
+                label: "Tổng KPI",
+                data: data,
+                backgroundColor: "rgba(46, 204, 113, 0.7)",
+                borderColor: "rgba(39, 174, 96, 1)",
+                borderWidth: 2,
+              },
+            ],
+          },
+          options: {
+            responsive: true,
+            plugins: {
+              legend: { display: false },
+              title: {
+                display: false,
+              },
+              tooltip: {
+                callbacks: {
+                  label: function (context) {
+                    return `Tổng KPI: ${context.parsed.y}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                max: 10,
+                title: {
+                  display: true,
+                  text: "KPI Trung bình",
+                },
+              },
+              x: {
+                title: {
+                  display: true,
+                  text: "Nhân viên",
+                },
+              },
+            },
+          },
+        });
+      }
+
+      // Render employees table
+      function renderEmployees() {
+        const tbody = document.getElementById("employeeTableBody");
+        tbody.innerHTML = "";
+
+        const filterDepartment =
+          document.getElementById("department-filter").value;
+
+        employees.forEach((employee, index) => {
+          if (
+            filterDepartment === "Tất cả" ||
+            employee.department === filterDepartment
+          ) {
+            const totalKPI = (
+              (parseFloat(employee.quality) +
+                parseFloat(employee.efficiency) +
+                parseFloat(employee.timeliness) +
+                parseFloat(employee.creativity) +
+                parseFloat(employee.teamwork) +
+                parseFloat(employee.attitude) +
+                parseFloat(employee.skills) +
+                parseFloat(employee.other)) /
+              8
+            ).toFixed(1);
+
+            let rating = "needs-improvement";
+            let ratingText = "Cần cải thiện";
+            if (totalKPI >= 9) {
+              rating = "excellent";
+              ratingText = "Xuất sắc";
+            } else if (totalKPI >= 8) {
+              rating = "good";
+              ratingText = "Tốt";
+            } else if (totalKPI >= 7) {
+              rating = "average";
+              ratingText = "Trung bình";
+            }
+
+            const row = document.createElement("tr");
+            row.innerHTML = `
                         <td>${index + 1}</td>
                         <td>${employee.name}</td>
                         <td>${employee.department}</td>
@@ -519,339 +594,342 @@
                         <td><span class="rating-badge rating-${rating}">${ratingText}</span></td>
                         <td>${employee.notes}</td>
                     `;
-          tbody.appendChild(row);
+            tbody.appendChild(row);
+          }
+        });
+        renderKPIChart();
+      }
+
+      function showAddTaskModal() {
+        document.getElementById("addTaskModal").style.display = "block";
+      }
+      function showAddEmployeeModal() {
+        document.getElementById("addEmployeeModal").style.display = "block";
+      }
+      function closeModal(modalId) {
+        document.getElementById(modalId).style.display = "none";
+      }
+
+      function toggleTask(taskId) {
+        const task = tasks.find((t) => t.id === taskId);
+        if (task) {
+          task.completed = !task.completed;
+          task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
+
+          fetch(api + `updateTask/${taskId}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              completed: task.completed,
+              status: task.status,
+
+              id: task.id,
+              name: task.name,
+              priority: task.priority,
+              deadline: task.deadline,
+              kpi: task.kpi,
+              weight: task.weight,
+              notes: task.notes,
+            }),
+          })
+            .then((res) => {
+              if (!res.ok) {
+                throw new Error("Lỗi khi cập nhật trạng thái task");
+              }
+              return res.json();
+            })
+            .then((data) => {
+              // Sau khi cập nhật thành công, làm mới dữ liệu
+              loadTasksFromAPI();
+              updateDashboard();
+            })
+            .catch((err) => {
+              console.error("Lỗi cập nhật task:", err);
+              alert("Không thể cập nhật trạng thái task. Vui lòng thử lại.");
+              // Nếu lỗi, đảo lại trạng thái cũ
+              task.completed = !task.completed;
+              task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
+              renderTasks();
+            });
+        }
+      }
+      function deleteTask(taskId) {
+        if (confirm("Bạn có chắc chắn muốn xóa công việc này?")) {
+          fetch(api + `deleteTask/${taskId}`, {
+            method: "DELETE",
+          })
+            .then((res) => {
+              if (!res.ok) {
+                throw new Error("Lỗi khi xóa task");
+              }
+              return res.json();
+            })
+            .then((data) => {
+              console.log("Đã xóa:", data);
+              loadTasksFromAPI(); // Gọi lại API để cập nhật danh sách
+            })
+            .catch((err) => {
+              console.error("Lỗi xóa task:", err);
+              alert("Không thể xóa task. Vui lòng thử lại.");
+            });
+        }
+      }
+
+      // Filter functions
+      function filterTasks() {
+        renderTasks();
+      }
+      document
+        .getElementById("department-filter")
+        .addEventListener("change", renderEmployees);
+
+      // Placeholder functions
+      function downloadReport() {
+        const data = [
+          [
+            "STT",
+            "Công việc",
+            "Ưu tiên",
+            "Hạn chót",
+            "KPI",
+            "Trọng số (%)",
+            "Trạng thái",
+            "Ghi chú",
+          ],
+          ...tasks.map((task, idx) => [
+            idx + 1,
+            task.name,
+            task.priority,
+            new Date(task.deadline).toLocaleString("vi-VN"),
+            task.kpi,
+            task.weight,
+            task.status,
+            task.notes || "",
+          ]),
+        ];
+
+        // Tạo worksheet và workbook
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "CongViec");
+
+        // Xuất file
+        XLSX.writeFile(wb, "BaoCao_CongViec.xlsx");
+      }
+      function importExcel() {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".xlsx,.xls";
+        input.onchange = (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = (evt) => {
+            const data = new Uint8Array(evt.target.result);
+            const workbook = XLSX.read(data, { type: "array" });
+            const sheetName = workbook.SheetNames[0];
+            const sheet = workbook.Sheets[sheetName];
+            const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+            employees = rows
+              .slice(1)
+              .filter((r) => r.length >= 4)
+              .map((row, idx) => ({
+                id: Date.now() + idx,
+                name: row[1] || "",
+                department: row[2] || "",
+                position: row[3] || "",
+                quality: parseFloat(row[4]) || 0,
+                efficiency: parseFloat(row[5]) || 0,
+                timeliness: parseFloat(row[6]) || 0,
+                creativity: parseFloat(row[7]) || 0,
+                teamwork: parseFloat(row[8]) || 0,
+                attitude: parseFloat(row[9]) || 0,
+                skills: parseFloat(row[10]) || 0,
+                other: parseFloat(row[11]) || 0,
+                notes: row[14] || "",
+              }));
+            renderEmployees();
+            alert("Import thành công!");
+          };
+          reader.readAsArrayBuffer(file);
+        };
+        input.click();
+      }
+      function exportExcel() {
+        const data = [
+          [
+            "STT",
+            "Tên",
+            "Phòng ban",
+            "Vị trí",
+            "Chất lượng",
+            "Hiệu suất",
+            "Đúng hạn",
+            "Sáng tạo",
+            "Làm việc nhóm",
+            "Thái độ",
+            "Kỹ năng",
+            "Khác",
+            "Tổng KPI",
+            "Xếp loại",
+            "Ghi chú",
+          ],
+          ...employees.map((emp, idx) => {
+            const totalKPI = (
+              (parseFloat(emp.quality) +
+                parseFloat(emp.efficiency) +
+                parseFloat(emp.timeliness) +
+                parseFloat(emp.creativity) +
+                parseFloat(emp.teamwork) +
+                parseFloat(emp.attitude) +
+                parseFloat(emp.skills) +
+                parseFloat(emp.other)) /
+              8
+            ).toFixed(1);
+
+            let ratingText = "Cần cải thiện";
+            if (totalKPI >= 9) ratingText = "Xuất sắc";
+            else if (totalKPI >= 8) ratingText = "Tốt";
+            else if (totalKPI >= 7) ratingText = "Trung bình";
+
+            return [
+              idx + 1,
+              emp.name,
+              emp.department,
+              emp.position,
+              emp.quality,
+              emp.efficiency,
+              emp.timeliness,
+              emp.creativity,
+              emp.teamwork,
+              emp.attitude,
+              emp.skills,
+              emp.other,
+              totalKPI,
+              ratingText,
+              emp.notes || "",
+            ];
+          }),
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "KPI_NhanVien");
+
+        XLSX.writeFile(wb, "BaoCao_KPI_NhanVien.xlsx");
+      }
+      function connectChecklist() {
+        alert("Chức năng đang phát triển!");
+      }
+
+      document
+        .getElementById("addTaskForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+
+          const formData = new FormData(e.target);
+          const newTask = {
+            name: formData.get("name"),
+            priority: formData.get("priority"),
+            deadline: formData.get("deadline"),
+            kpi: parseFloat(formData.get("kpi")),
+            weight: parseInt(formData.get("weight")),
+            status: "Đang thực hiện",
+            completed: false,
+            notes: formData.get("notes") || "",
+          };
+
+          fetch(api + "addTask", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newTask),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Lỗi khi thêm task");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              console.log("Thêm task thành công:", data);
+              // Sau khi thêm thành công, gọi lại API để lấy danh sách mới
+              loadTasksFromAPI();
+              closeModal("addTaskModal");
+              e.target.reset();
+            })
+            .catch((error) => {
+              console.error("Lỗi:", error);
+              alert("Thêm task thất bại. Vui lòng thử lại.");
+            });
+        });
+
+      document
+        .getElementById("addEmployeeForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const newEmployee = {
+            id: Date.now(),
+            name: formData.get("name"),
+            department: formData.get("department"),
+            position: formData.get("position"),
+            quality: 0,
+            efficiency: 0,
+            timeliness: 0,
+            creativity: 0,
+            teamwork: 0,
+            attitude: 0,
+            skills: 0,
+            other: 0,
+            notes: "",
+          };
+          employees.push(newEmployee);
+          renderEmployees();
+          closeModal("addEmployeeModal");
+          e.target.reset();
+        });
+
+      window.addEventListener("click", function (e) {
+        if (e.target.classList.contains("modal")) {
+          e.target.style.display = "none";
         }
       });
-      renderKPIChart();
-    }
 
-    function showAddTaskModal() {
-      document.getElementById("addTaskModal").style.display = "block";
-    }
-    function showAddEmployeeModal() {
-      document.getElementById("addEmployeeModal").style.display = "block";
-    }
-    function closeModal(modalId) {
-      document.getElementById(modalId).style.display = "none";
-    }
+      function decrypt(data) {
+        if (typeof data !== "string") {
+          throw new TypeError("Data to decrypt must be a string");
+        }
 
-    function toggleTask(taskId) {
-      const task = tasks.find((t) => t.id === taskId);
-      if (task) {
-        task.completed = !task.completed;
-        task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
+        const parts = data.split(":");
+        if (parts.length !== 2) {
+          throw new Error("Invalid encrypted data format");
+        }
 
-        fetch(`http://http://103.200.23.120/:3000/api/quantri/services/updateTask/${taskId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            completed: task.completed,vi
-            status: task.status,
+        const ivHex = parts[0];
+        const encryptedHex = parts[1];
 
-            id: task.id,
-            name: task.name,
-            priority: task.priority,
-            deadline: task.deadline,
-            kpi: task.kpi,
-            weight: task.weight,
-            notes: task.notes,
-          }),
-        })
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("Lỗi khi cập nhật trạng thái task");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            // Sau khi cập nhật thành công, làm mới dữ liệu
-            loadTasksFromAPI();
-            updateDashboard();
-          })
-          .catch((err) => {
-            console.error("Lỗi cập nhật task:", err);
-            alert("Không thể cập nhật trạng thái task. Vui lòng thử lại.");
-            // Nếu lỗi, đảo lại trạng thái cũ
-            task.completed = !task.completed;
-            task.status = task.completed ? "Hoàn thành" : "Đang thực hiện";
-            renderTasks();
-          });
+        const key = CryptoJS.enc.Utf8.parse("BIryQ4iRqJo1NqwJzJbMvTShcU6Iz4/b"); // hoặc lấy key đúng theo bạn dùng
+        const iv = CryptoJS.enc.Hex.parse(ivHex);
+        const encrypted = CryptoJS.enc.Hex.parse(encryptedHex);
+
+        const decrypted = CryptoJS.AES.decrypt({ ciphertext: encrypted }, key, {
+          iv: iv,
+          mode: CryptoJS.mode.CBC,
+          padding: CryptoJS.pad.Pkcs7,
+        }).toString(CryptoJS.enc.Utf8);
+
+        try {
+          return JSON.parse(decrypted);
+        } catch {
+          return decrypted;
+        }
       }
-    }
-    function deleteTask(taskId) {
-      if (confirm("Bạn có chắc chắn muốn xóa công việc này?")) {
-        fetch(`http://http://103.200.23.120/:3000/api/quantri/services/deleteTask/${taskId}`, {
-          method: "DELETE",
-        })
-          .then((res) => {
-            if (!res.ok) {
-              throw new Error("Lỗi khi xóa task");
-            }
-            return res.json();
-          })
-          .then((data) => {
-            console.log("Đã xóa:", data);
-            loadTasksFromAPI(); // Gọi lại API để cập nhật danh sách
-          })
-          .catch((err) => {
-            console.error("Lỗi xóa task:", err);
-            alert("Không thể xóa task. Vui lòng thử lại.");
-          });
-      }
-    }
-
-    // Filter functions
-    function filterTasks() {
-      renderTasks();
-    }
-    document
-      .getElementById("department-filter")
-      .addEventListener("change", renderEmployees);
-
-    // Placeholder functions
-    function downloadReport() {
-      const data = [
-        [
-          "STT",
-          "Công việc",
-          "Ưu tiên",
-          "Hạn chót",
-          "KPI",
-          "Trọng số (%)",
-          "Trạng thái",
-          "Ghi chú",
-        ],
-        ...tasks.map((task, idx) => [
-          idx + 1,
-          task.name,
-          task.priority,
-          new Date(task.deadline).toLocaleString("vi-VN"),
-          task.kpi,
-          task.weight,
-          task.status,
-          task.notes || "",
-        ]),
-      ];
-
-      // Tạo worksheet và workbook
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "CongViec");
-
-      // Xuất file
-      XLSX.writeFile(wb, "BaoCao_CongViec.xlsx");
-    }
-    function importExcel() {
-      const input = document.createElement("input");
-      input.type = "file";
-      input.accept = ".xlsx,.xls";
-      input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const data = new Uint8Array(evt.target.result);
-          const workbook = XLSX.read(data, { type: "array" });
-          const sheetName = workbook.SheetNames[0];
-          const sheet = workbook.Sheets[sheetName];
-          const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-          employees = rows.slice(1).filter(r => r.length >= 4).map((row, idx) => ({
-            id: Date.now() + idx,
-            name: row[1] || "",
-            department: row[2] || "",
-            position: row[3] || "",
-            quality: parseFloat(row[4]) || 0,
-            efficiency: parseFloat(row[5]) || 0,
-            timeliness: parseFloat(row[6]) || 0,
-            creativity: parseFloat(row[7]) || 0,
-            teamwork: parseFloat(row[8]) || 0,
-            attitude: parseFloat(row[9]) || 0,
-            skills: parseFloat(row[10]) || 0,
-            other: parseFloat(row[11]) || 0,
-            notes: row[14] || ""
-          }));
-          renderEmployees();
-          alert("Import thành công!");
-        };
-        reader.readAsArrayBuffer(file);
-      };
-      input.click();
-    }
-    function exportExcel() {
-      const data = [
-        [
-          "STT",
-          "Tên",
-          "Phòng ban",
-          "Vị trí",
-          "Chất lượng",
-          "Hiệu suất",
-          "Đúng hạn",
-          "Sáng tạo",
-          "Làm việc nhóm",
-          "Thái độ",
-          "Kỹ năng",
-          "Khác",
-          "Tổng KPI",
-          "Xếp loại",
-          "Ghi chú"
-        ],
-        ...employees.map((emp, idx) => {
-          const totalKPI = (
-            (parseFloat(emp.quality) +
-              parseFloat(emp.efficiency) +
-              parseFloat(emp.timeliness) +
-              parseFloat(emp.creativity) +
-              parseFloat(emp.teamwork) +
-              parseFloat(emp.attitude) +
-              parseFloat(emp.skills) +
-              parseFloat(emp.other)) / 8
-          ).toFixed(1);
-
-          let ratingText = "Cần cải thiện";
-          if (totalKPI >= 9) ratingText = "Xuất sắc";
-          else if (totalKPI >= 8) ratingText = "Tốt";
-          else if (totalKPI >= 7) ratingText = "Trung bình";
-
-          return [
-            idx + 1,
-            emp.name,
-            emp.department,
-            emp.position,
-            emp.quality,
-            emp.efficiency,
-            emp.timeliness,
-            emp.creativity,
-            emp.teamwork,
-            emp.attitude,
-            emp.skills,
-            emp.other,
-            totalKPI,
-            ratingText,
-            emp.notes || ""
-          ];
-        })
-      ];
-
-      const ws = XLSX.utils.aoa_to_sheet(data);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "KPI_NhanVien");
-
-      XLSX.writeFile(wb, "BaoCao_KPI_NhanVien.xlsx");
-    }
-    function connectChecklist() {
-      alert("Chức năng đang phát triển!");
-    }
-
-    document
-      .getElementById("addTaskForm")
-      .addEventListener("submit", function (e) {
-        e.preventDefault();
-
-        const formData = new FormData(e.target);
-        const newTask = {
-          name: formData.get("name"),
-          priority: formData.get("priority"),
-          deadline: formData.get("deadline"),
-          kpi: parseFloat(formData.get("kpi")),
-          weight: parseInt(formData.get("weight")),
-          status: "Đang thực hiện",
-          completed: false,
-          notes: formData.get("notes") || "",
-        };
-
-        fetch("http://http://103.200.23.120/:3000/api/quantri/services/addTask", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(newTask),
-        })
-          .then((response) => {
-            if (!response.ok) {
-              throw new Error("Lỗi khi thêm task");
-            }
-            return response.json();
-          })
-          .then((data) => {
-            console.log("Thêm task thành công:", data);
-            // Sau khi thêm thành công, gọi lại API để lấy danh sách mới
-            loadTasksFromAPI();
-            closeModal("addTaskModal");
-            e.target.reset();
-          })
-          .catch((error) => {
-            console.error("Lỗi:", error);
-            alert("Thêm task thất bại. Vui lòng thử lại.");
-          });
-      });
-
-    document
-      .getElementById("addEmployeeForm")
-      .addEventListener("submit", function (e) {
-        e.preventDefault();
-        const formData = new FormData(e.target);
-        const newEmployee = {
-          id: Date.now(),
-          name: formData.get("name"),
-          department: formData.get("department"),
-          position: formData.get("position"),
-          quality: 0,
-          efficiency: 0,
-          timeliness: 0,
-          creativity: 0,
-          teamwork: 0,
-          attitude: 0,
-          skills: 0,
-          other: 0,
-          notes: "",
-        };
-        employees.push(newEmployee);
-        renderEmployees();
-        closeModal("addEmployeeModal");
-        e.target.reset();
-      });
-
-    window.addEventListener("click", function (e) {
-      if (e.target.classList.contains("modal")) {
-        e.target.style.display = "none";
-      }
-    });
-
-    function decrypt(data) {
-      if (typeof data !== "string") {
-        throw new TypeError("Data to decrypt must be a string");
-      }
-
-      const parts = data.split(":");
-      if (parts.length !== 2) {
-        throw new Error("Invalid encrypted data format");
-      }
-
-      const ivHex = parts[0];
-      const encryptedHex = parts[1];
-
-      const key = CryptoJS.enc.Utf8.parse("BIryQ4iRqJo1NqwJzJbMvTShcU6Iz4/b"); // hoặc lấy key đúng theo bạn dùng
-      const iv = CryptoJS.enc.Hex.parse(ivHex);
-      const encrypted = CryptoJS.enc.Hex.parse(encryptedHex);
-
-      const decrypted = CryptoJS.AES.decrypt({ ciphertext: encrypted }, key, {
-        iv: iv,
-        mode: CryptoJS.mode.CBC,
-        padding: CryptoJS.pad.Pkcs7,
-      }).toString(CryptoJS.enc.Utf8);
-
-      try {
-        return JSON.parse(decrypted);
-      } catch {
-        return decrypted;
-      }
-    }
-  </script>
-</body>
-
+    </script>
+  </body>
 </html>
 <style>
   * {
@@ -1069,5 +1147,75 @@
   .add-task-btn:active {
     transform: translateY(0);
     box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
+  } 
+  .header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #fff;
+  padding: 15px 20px;
+  border-bottom: 1px solid #eee;
+  position: relative;
+}
+
+.menu {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.menu li {
+  padding: 10px 15px;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.menu li:hover {
+  background-color: #d0e0ff;
+}
+
+.login-btn {
+  padding: 10px 16px;
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.3s;
+}
+
+.login-btn:hover {
+  background-color: #0056b3;
+}
+
+/* Hamburger */
+.menu-toggle {
+  display: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Responsive for mobile */
+@media (max-width: 768px) {
+  .menu {
+    flex-direction: column;
+    position: absolute;
+    top: 60px;
+    left: 0;
+    width: 100%;
+    background-color: #fff;
+    display: none;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   }
+
+  .menu.show {
+    display: flex;
+  }
+
+  .menu-toggle {
+    display: block;
+  }
+}
 </style>
