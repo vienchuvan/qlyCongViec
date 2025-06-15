@@ -81,7 +81,7 @@
           };
 
           try {
-            let res = await fetch("http://103.200.23.120:3000/api/auth/login", {
+            let res = await fetch("https://103.200.23.120:3000/api/auth/login", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(loginData),
@@ -706,7 +706,7 @@
       // Global variables
       let tasks = [];
       let employees = [];
-      var api = "http://103.200.23.120:3000/api/quantri/services/";
+      var api = "https://103.200.23.120:3000/api/quantri/services/";
       var apiLocal = "http://localhost:3000/api/quantri/services/";
       // Initialize the application
       document.addEventListener("DOMContentLoaded", function () {
