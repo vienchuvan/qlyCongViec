@@ -164,7 +164,7 @@ router.post("/services/addEmployee", async (req, res) => {
 });
 router.delete("/services/deleteEmployee/:id", (req, res) => {
   const id = req.params.id;
-  const sql = `DELETE FROM nhân viên WHERE id = ?`;
+  const sql = `DELETE FROM employees WHERE id = ?`;
   db.query(sql, [id], (err, result) => {
     if (err) {
       console.log("Lỗi xóa nhân viên:", err);

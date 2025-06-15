@@ -11,14 +11,14 @@
 
   <body>
     <div class="loading">Đang tải...</div>
-    <section class="header">
+    <section class="header" style="justify-content: center;">
       <div class="menu-toggle" id="menu-toggle">&#9776;</div>
-      <ul class="menu" id="menu">
+      <!-- <ul class="menu" id="menu">
         <li class="li1">KPI</li>
         <li class="li2">Công Việc</li>
         <li class="li3">Theo dõi KPI</li>
         <li class="li4">Biểu đồ</li>
-      </ul>
+      </ul> -->
       <button class="login-btn">Đăng nhập</button>
     </section>
 
@@ -82,6 +82,7 @@
                 sessionStorage.setItem("user", JSON.stringify(data.user));
                 alert("Đăng nhập thành công!");
                 closeModal("loginModal");
+                window.location.reload();
                 updateUIAfterLogin();
               } else {
                 alert("Đăng nhập thất bại. Vui lòng thử lại.");
@@ -250,19 +251,7 @@
         <div id="downloadReportButtonContainer"></div>
       </div>
       <table>
-        <thead>
-          <tr>
-            <th>STT</th>
-            <th>✓</th>
-            <th>Công việc</th>
-            <th>Ưu tiên</th>
-            <th>Hạn chót</th>
-            <th>KPI</th>
-            <th>Trọng số (%)</th>
-            <th>Trạng thái</th>
-            <th>Hành động</th>
-          </tr>
-        </thead>
+        <tbody id="taskTableThead"></tbody>
         <tbody id="taskTableBody"></tbody>
       </table>
       <div id="addTaskButtonContainer"></div>
@@ -413,32 +402,14 @@
         <!-- <button onclick="connectChecklist()">🔗 Kết nối Checklist</button> -->
       </div>
       <table id="kpi-table">
-        <thead>
-          <tr>
-            <th>STT</th>
-            <th>Tên</th>
-            <th>Phòng ban</th>
-            <th>Vị trí</th>
-            <th>Chất lượng</th>
-            <th>Hiệu suất</th>
-            <th>Đúng hạn</th>
-            <th>Sáng tạo</th>
-            <th>Làm việc nhóm</th>
-            <th>Thái độ</th>
-            <th>Kỹ năng</th>
-            <th>Khác</th>
-            <th>Tổng KPI</th>
-            <th>Xếp loại</th>
-            <th>Ghi chú</th>
-          </tr>
-        </thead>
+        <tbody id="employeeTableThead"></tbody>
         <tbody id="employeeTableBody"></tbody>
       </table>
     </section>
 
     <!-- Modal Chỉnh sửa Employee -->
     <div id="editEmployeeModal" class="modal" aria-hidden="true">
-      <div class="modal-content" style="max-width: 800px; margin-top: 30px;">
+      <div class="modal-content" style="max-width: 800px; margin-top: 30px">
         <h2>Chỉnh sửa nhân viên</h2>
         <form id="editEmployeeForm">
           <input type="hidden" name="id" />
@@ -618,7 +589,12 @@
 
         document.getElementById("editTaskModal").style.display = "block";
       }
-      function showEditEmployeeModal(employee) {
+      function showEditEmployeeModal(employeeId) {
+        const employee = employees.find((t) => t.id === employeeId); // Tìm task theo ID
+        if (!employee) {
+          alert("Không tìm nhân viên!");
+          return;
+        }
         const form = document.getElementById("editEmployeeForm");
         form.name.value = employee.name;
         form.department.value = employee.department;
@@ -666,49 +642,49 @@
             .catch((err) => console.error("Lỗi cập nhật task:", err));
         });
 
-     document
-  .getElementById("editEmployeeForm")
-  .addEventListener("submit", function (e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
+      document
+        .getElementById("editEmployeeForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const formData = new FormData(e.target);
 
-    const updatedEmployee = {
-      id: parseInt(formData.get("id")),
-      name: formData.get("name"),
-      department: formData.get("department"),
-      position: formData.get("position"),
-      quality: parseFloat(formData.get("quality")),
-      efficiency: parseFloat(formData.get("efficiency")),
-      timeliness: parseFloat(formData.get("timeliness")),
-      creativity: parseFloat(formData.get("creativity")),
-      teamwork: parseFloat(formData.get("teamwork")),
-      attitude: parseFloat(formData.get("attitude")),
-      skills: parseFloat(formData.get("skills")),
-      other: parseFloat(formData.get("other")),
-      notes: formData.get("notes"),
-    };
+          const updatedEmployee = {
+            id: parseInt(formData.get("id")),
+            name: formData.get("name"),
+            department: formData.get("department"),
+            position: formData.get("position"),
+            quality: parseFloat(formData.get("quality")),
+            efficiency: parseFloat(formData.get("efficiency")),
+            timeliness: parseFloat(formData.get("timeliness")),
+            creativity: parseFloat(formData.get("creativity")),
+            teamwork: parseFloat(formData.get("teamwork")),
+            attitude: parseFloat(formData.get("attitude")),
+            skills: parseFloat(formData.get("skills")),
+            other: parseFloat(formData.get("other")),
+            notes: formData.get("notes"),
+          };
 
-    // Gửi API cập nhật nhân viên
-    fetch(api + `updateEmployee/${updatedEmployee.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updatedEmployee),
-    })
-      .then((res) => {
-        if (!res.ok) {
-          throw new Error("Lỗi khi cập nhật nhân viên");
-        }
-        return res.json();
-      })
-      .then(() => {
-        loadNVFromAPI(); // Làm mới danh sách nhân viên
-        closeModal("editEmployeeModal"); // Đóng modal
-      })
-      .catch((err) => {
-        console.error("Lỗi cập nhật nhân viên:", err);
-        alert("Không thể cập nhật nhân viên. Vui lòng thử lại.");
-      });
-  });
+          // Gửi API cập nhật nhân viên
+          fetch(api + `updateEmployee/${updatedEmployee.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedEmployee),
+          })
+            .then((res) => {
+              if (!res.ok) {
+                throw new Error("Lỗi khi cập nhật nhân viên");
+              }
+              return res.json();
+            })
+            .then(() => {
+              loadNVFromAPI(); // Làm mới danh sách nhân viên
+              closeModal("editEmployeeModal"); // Đóng modal
+            })
+            .catch((err) => {
+              console.error("Lỗi cập nhật nhân viên:", err);
+              alert("Không thể cập nhật nhân viên. Vui lòng thử lại.");
+            });
+        });
     </script>
 
     <script>
@@ -716,12 +692,15 @@
       let tasks = [];
       let employees = [];
       var api = "http://103.200.23.120:3000/api/quantri/services/";
+      var apiLocal = "http://localhost:3000/api/quantri/services/";
       // Initialize the application
       document.addEventListener("DOMContentLoaded", function () {
         loadTasksFromAPI();
         loadNVFromAPI();
         updateDashboard();
+        renderTasksTableHeader();
         renderTasks();
+        renderEmployeeTableHeader();
         renderEmployees();
       });
       document
@@ -849,6 +828,25 @@
         document.getElementById("averageKPI").textContent = averageKPI;
       }
 
+      function renderTasksTableHeader() {
+        const user = JSON.parse(sessionStorage.getItem("user")); // Lấy thông tin user từ sessionStorage
+        const thead = document.querySelector("#taskTableThead");
+        thead.innerHTML = `
+    <tr>
+       <th>STT</th>
+            <th>✓</th>
+            <th>Công việc</th>
+            <th>Ưu tiên</th>
+            <th>Hạn chót</th>
+            <th>KPI</th>
+            <th>Trọng số (%)</th>
+            <th>Trạng thái</th>
+            
+      ${user && user.id === 810 ? "<th>Hành động</th>" : ""}
+    </tr>
+  `;
+      }
+
       // Render tasks table
       function renderTasks() {
         const tbody = document.getElementById("taskTableBody");
@@ -857,7 +855,8 @@
         // Lọc theo trạng thái và ưu tiên
         const filterStatus = document.getElementById("filterStatus").value;
         const filterPriority = document.getElementById("filterPriority").value;
-        console.log(tasks);
+        const user = JSON.parse(sessionStorage.getItem("user")); // Lấy thông tin user từ sessionStorage
+
 
         tasks.forEach((task, index) => {
           if (
@@ -895,15 +894,15 @@
                         <td><span class="status-badge status-${statusClass}">${
               task.status
             }</span></td>
-                        <td>
-                            <button onclick="deleteTask(${
-                              task.id
-                            })" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
-                             <button onclick="showEditTaskModal(${
-                               task.id
-                             })" style="background: green; font-size: 12px; padding: 5px 10px;">⚙ Sửa</button>
-                        </td>
-                    `;
+                        ${
+                      user && user.id === 810
+                        ? `<td>
+                <button onclick="deleteTask(${task.id})" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
+                <button onclick="showEditTaskModal(${task.id})" style="background: green; font-size: 12px; padding: 5px 10px;">⚙ Sửa</button>
+                </td>`
+                        : ""
+                    }
+      `;
 
             tbody.appendChild(row);
           }
@@ -985,6 +984,30 @@
         });
       }
 
+      function renderEmployeeTableHeader() {
+        const user = JSON.parse(sessionStorage.getItem("user")); // Lấy thông tin user từ sessionStorage
+        const thead = document.querySelector("#employeeTableThead");
+        thead.innerHTML = `
+    <tr>
+      <th>STT</th>
+      <th>Tên</th>
+      <th>Phòng ban</th>
+      <th>Vị trí</th>
+      <th>Chất lượng</th>
+      <th>Hiệu suất</th>
+      <th>Đúng hạn</th>
+      <th>Sáng tạo</th>
+      <th>Làm việc nhóm</th>
+      <th>Thái độ</th>
+      <th>Kỹ năng</th>
+      <th>Khác</th>
+      <th>Tổng KPI</th>
+      <th>Xếp loại</th>
+      <th>Ghi chú</th>
+      ${user && user.id === 810 ? "<th>Hành động</th>" : ""}
+    </tr>
+  `;
+      }
       // Render employees table
       function renderEmployees() {
         const tbody = document.getElementById("employeeTableBody");
@@ -992,6 +1015,7 @@
 
         const filterDepartment =
           document.getElementById("department-filter").value;
+        const user = JSON.parse(sessionStorage.getItem("user")); // Lấy thông tin user từ sessionStorage
 
         employees.forEach((employee, index) => {
           if (
@@ -1040,17 +1064,42 @@
                         <td><strong>${totalKPI}</strong></td>
                         <td><span class="rating-badge rating-${rating}">${ratingText}</span></td>
                         <td>${employee.notes}</td>
-                    `;
-            row.addEventListener("click", () =>
-              showEditEmployeeModal(employee)
-            );
-
+                    ${
+                      user && user.id === 810
+                        ? `<td>
+                <button onclick="deleteEmployee(${employee.id})" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
+                <button onclick="showEditEmployeeModal(${employee.id})" style="background: green; font-size: 12px; padding: 5px 10px;">⚙ Sửa</button>
+                </td>`
+                        : ""
+                    }
+      `;
             tbody.appendChild(row);
           }
         });
         renderKPIChart();
       }
 
+      function deleteEmployee(employeeId) {
+        if (confirm("Bạn có chắc chắn muốn xóa nhân viên này?")) {
+          fetch(apiLocal + `deleteEmployee/${employeeId}`, {
+            method: "DELETE",
+          })
+            .then((res) => {
+              if (!res.ok) {
+                throw new Error("Lỗi khi xóa nhân viên");
+              }
+              return res.json();
+            })
+            .then(() => {
+              alert("Xóa nhân viên thành công!");
+              window.location.reload(); // Làm mới trang để cập nhật danh sách
+            })
+            .catch((err) => {
+              console.error("Lỗi xóa nhân viên:", err);
+              alert("Không thể xóa nhân viên. Vui lòng thử lại.");
+            });
+        }
+      }
       function showAddTaskModal() {
         document.getElementById("addTaskModal").style.display = "block";
       }
@@ -1320,26 +1369,48 @@
         .getElementById("addEmployeeForm")
         .addEventListener("submit", function (e) {
           e.preventDefault();
+
           const formData = new FormData(e.target);
+
           const newEmployee = {
-            id: Date.now(),
             name: formData.get("name"),
             department: formData.get("department"),
             position: formData.get("position"),
-            quality: 0,
-            efficiency: 0,
-            timeliness: 0,
-            creativity: 0,
-            teamwork: 0,
-            attitude: 0,
-            skills: 0,
-            other: 0,
-            notes: "",
+            quality: 0, // Giá trị mặc định
+            efficiency: 0, // Giá trị mặc định
+            timeliness: 0, // Giá trị mặc định
+            creativity: 0, // Giá trị mặc định
+            teamwork: 0, // Giá trị mặc định
+            attitude: 0, // Giá trị mặc định
+            skills: 0, // Giá trị mặc định
+            other: 0, // Giá trị mặc định
+            notes: "", // Giá trị mặc định
           };
-          employees.push(newEmployee);
-          renderEmployees();
-          closeModal("addEmployeeModal");
-          e.target.reset();
+
+          // Gửi API thêm nhân viên
+          fetch(api + "addEmployee", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(newEmployee),
+          })
+            .then((response) => {
+              if (!response.ok) {
+                throw new Error("Lỗi khi thêm nhân viên");
+              }
+              return response.json();
+            })
+            .then((data) => {
+              loadNVFromAPI(); // Làm mới danh sách nhân viên
+              closeModal("addEmployeeModal"); // Đóng modal
+              e.target.reset(); // Reset form
+              alert("Thêm nhân viên thành công!");
+            })
+            .catch((error) => {
+              console.error("Lỗi:", error);
+              alert("Thêm nhân viên thất bại. Vui lòng thử lại.");
+            });
         });
 
       window.addEventListener("click", function (e) {
@@ -1598,24 +1669,24 @@
     box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
   }
   .input-row {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  margin-bottom: 15px;
-}
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    margin-bottom: 15px;
+  }
 
-.input-row label {
-  flex: 1;
-  font-size: 14px;
-}
+  .input-row label {
+    flex: 1;
+    font-size: 14px;
+  }
 
-.input-row input {
-  flex: 2;
-  padding: 10px;
-  border: 2px solid #ddd;
-  border-radius: 6px;
-  font-size: 14px;
-}
+  .input-row input {
+    flex: 2;
+    padding: 10px;
+    border: 2px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+  }
   .header {
     display: flex;
     justify-content: space-between;
