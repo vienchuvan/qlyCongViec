@@ -176,6 +176,57 @@ router.delete("/services/deleteEmployee/:id", (req, res) => {
     return res.json({ message: "Xóa nhân viên thành công" });
   });
 });
+router.put("/services/updateEmployee/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const {
+      name,
+      department,
+      position,
+      quality,
+      efficiency,
+      timeliness,
+      creativity,
+      teamwork,
+      attitude,
+      skills,
+      other,
+      notes,
+    } = req.body;
 
+    const sql = `
+      UPDATE employees
+      SET name = ?, department = ?, position = ?, quality = ?, efficiency = ?, timeliness = ?, creativity = ?, teamwork = ?, attitude = ?, skills = ?, other = ?, notes = ?
+      WHERE id = ?
+    `;
+
+    const values = [
+      name,
+      department,
+      position,
+      quality,
+      efficiency,
+      timeliness,
+      creativity,
+      teamwork,
+      attitude,
+      skills,
+      other,
+      notes,
+      id,
+    ];
+
+    const [result] = await db.promise().query(sql, values);
+
+    if (result.affectedRows === 0) {
+      return res.status(404).json({ error: "Nhân viên không tồn tại" });
+    }
+
+    res.json({ message: "Cập nhật nhân viên thành công!" });
+  } catch (err) {
+    console.error("Lỗi khi cập nhật nhân viên:", err);
+    res.status(500).json({ error: "Cập nhật nhân viên thất bại." });
+  }
+});
 
 module.exports = router;

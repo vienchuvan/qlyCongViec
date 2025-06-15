@@ -23,19 +23,164 @@
     </section>
 
     <div id="loginModal" class="modal" aria-hidden="true">
-      <div class="modal-content" >
+      <div class="modal-content">
         <h2>Đăng Nhập</h2>
-        <form id="loginForm" style="margin-top: 5vh;">
-          <input type="text" name="username" required placeholder="Nhập tên đăng nhập..." />
-          <input type="password" name="password" required placeholder="Nhập mật khẩu..." />
+        <form id="loginForm" style="margin-top: 5vh">
+          <input
+            type="text"
+            name="username"
+            required
+            placeholder="Nhập tên đăng nhập..."
+          />
+          <input
+            type="password"
+            name="password"
+            required
+            placeholder="Nhập mật khẩu..."
+          />
           <div class="modal-buttons">
-            <button type="button" class="close-btn" onclick="closeModal('loginModal')">Hủy</button>
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('loginModal')"
+            >
+              Hủy
+            </button>
             <button type="submit">Đăng Nhập</button>
           </div>
         </form>
       </div>
     </div>
+    <script>
+      document
+        .getElementById("loginForm")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
 
+          const formData = new FormData(e.target);
+          const loginData = {
+            user: formData.get("username"),
+            pass: formData.get("password"),
+          };
+
+          try {
+            let res = await fetch("http://103.200.23.120:3000/api/auth/login", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(loginData),
+            });
+
+            console.log("res ", res);
+
+            if (res.ok) {
+              const data = await res.json();
+              console.log("data ", data);
+              if (data.status === 0) {
+                alert("Tài khoản hoặc mật khẩu không đúng!");
+              }
+              if (data.status === 2) {
+                sessionStorage.setItem("user", JSON.stringify(data.user));
+                alert("Đăng nhập thành công!");
+                closeModal("loginModal");
+                updateUIAfterLogin();
+              } else {
+                alert("Đăng nhập thất bại. Vui lòng thử lại.");
+              }
+            }
+          } catch (error) {
+            console.error("Lỗi đăng nhập:", error);
+            alert("Đăng nhập thất bại. Vui lòng thử lại.");
+          }
+        });
+
+      function updateUIAfterLogin() {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        if (user) {
+          document.querySelector(".login-btn").style.display = "none";
+          const header = document.querySelector(".header");
+          const userInfo = document.createElement("div");
+          userInfo.className = "user-info";
+          userInfo.innerHTML = `
+      <span>Xin chào, ${user.hoten} (${user.role})</span>
+      <button onclick="logout()">Đăng xuất</button>
+    `;
+          header.appendChild(userInfo);
+        }
+      }
+
+      function logout() {
+        sessionStorage.removeItem("user");
+        alert("Đăng xuất thành công!");
+        location.reload();
+      }
+
+      // Kiểm tra trạng thái đăng nhập khi tải trang
+      document.addEventListener("DOMContentLoaded", updateUIAfterLogin);
+
+      function getCurrentUserRole() {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        return user ? user.id : null;
+      }
+
+      function checkPermission(requiredRole) {
+        const userRole = getCurrentUserRole();
+        if (!userRole || userRole !== requiredRole) {
+          alert("Bạn không có quyền truy cập!");
+          return false;
+        }
+        return true;
+      }
+
+      function updateUIBasedOnRole() {
+        const userRole = getCurrentUserRole();
+
+        if (userRole === "986") {
+          document.querySelector(".add-task-btn").style.display = "none";
+        } else if (userRole === "123") {
+          // Chỉ huy không được sửa kết quả
+          document.querySelectorAll(".edit-result-btn").forEach((btn) => {
+            btn.style.display = "none";
+          });
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", updateUIBasedOnRole);
+    </script>
+
+    <div id="reportModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Nhập Báo Cáo Kết Quả</h2>
+        <form id="reportForm">
+          <label>Nhiệm vụ:</label>
+          <select name="taskId" required>
+            <!-- Các nhiệm vụ sẽ được load động -->
+          </select>
+          <label>Kết quả:</label>
+          <textarea
+            name="result"
+            rows="4"
+            required
+            placeholder="Nhập kết quả..."
+          ></textarea>
+          <label>Vấn đề phát sinh:</label>
+          <textarea
+            name="issues"
+            rows="4"
+            placeholder="Nhập vấn đề phát sinh..."
+          ></textarea>
+          <div class="modal-buttons">
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('reportModal')"
+            >
+              Hủy
+            </button>
+            <button type="submit">Lưu Báo Cáo</button>
+          </div>
+        </form>
+      </div>
+    </div>
 
     <section>
       <h1>📊 KPI CHECKLIST DASHBOARD</h1>
@@ -70,7 +215,21 @@
         </div>
       </div>
     </section>
+    <script>
+      function renderButtonsBasedOnUser() {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        if ((user && user.id === 810) || user.id === 986 || user.id === 123) {
+          document.getElementById("downloadReportButtonContainer").innerHTML = `
+            <button onclick="downloadReport()">📥 Tải báo cáo</button>
+          `;
+          document.getElementById("addTaskButtonContainer").innerHTML = `
+            <button class="add-task-btn" onclick="showAddTaskModal()">➕ Thêm công việc mới</button>
+          `;
+        }
+      }
 
+      document.addEventListener("DOMContentLoaded", renderButtonsBasedOnUser);
+    </script>
     <section>
       <h2>🎯 Quản lý công việc & KPI</h2>
       <div class="filter-section">
@@ -88,7 +247,7 @@
           <option value="Trung bình">Trung bình</option>
           <option value="Thấp">Thấp</option>
         </select>
-        <button onclick="downloadReport()">📥 Tải báo cáo</button>
+        <div id="downloadReportButtonContainer"></div>
       </div>
       <table>
         <thead>
@@ -106,12 +265,50 @@
         </thead>
         <tbody id="taskTableBody"></tbody>
       </table>
-      <!-- Nút Thêm công việc mới -->
-      <button class="add-task-btn" onclick="showAddTaskModal()">
-        ➕ Thêm công việc mới
-      </button>
+      <div id="addTaskButtonContainer"></div>
     </section>
-
+    <!-- Modal Chỉnh sửa Task -->
+    <div id="editTaskModal" class="modal" aria-hidden="true">
+      <div class="modal-content">
+        <h2>Chỉnh sửa công việc</h2>
+        <form id="editTaskForm">
+          <input type="hidden" name="id" />
+          <label>Tên công việc:</label>
+          <input type="text" name="name" required />
+          <label>Ưu tiên:</label>
+          <select name="priority">
+            <option value="Cao">Cao</option>
+            <option value="Trung bình">Trung bình</option>
+            <option value="Thấp">Thấp</option>
+          </select>
+          <label>Hạn chót:</label>
+          <input type="datetime-local" name="deadline" required />
+          <label>KPI:</label>
+          <input
+            type="number"
+            name="kpi"
+            min="0"
+            max="10"
+            step="0.1"
+            required
+          />
+          <label>Trọng số (%):</label>
+          <input type="number" name="weight" min="1" max="100" required />
+          <label>Ghi chú:</label>
+          <textarea name="notes" rows="3"></textarea>
+          <div class="modal-buttons">
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('editTaskModal')"
+            >
+              Hủy
+            </button>
+            <button type="submit">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <!-- Modal Thêm công việc mới -->
     <div id="addTaskModal" class="modal" aria-hidden="true">
       <div class="modal-content">
@@ -174,7 +371,7 @@
     <!-- Employee KPI Tracking -->
     <section>
       <h2>📊 BẢNG THEO DÕI CHẤM KPI</h2>
-      <div>
+      <div class="filter-section">
         <label>Kỳ đánh giá:</label>
         <select id="evaluation-period">
           <option value="Q2/2025">Q2/2025</option>
@@ -189,10 +386,31 @@
           <option value="Marketing">Marketing</option>
           <option value="HR">HR</option>
         </select>
-        <button onclick="importExcel()">📥 Import từ Excel</button>
+
+        <script>
+          function renderAddEmployeeButton() {
+            const user = JSON.parse(sessionStorage.getItem("user"));
+            if (
+              (user.id && user.id === 810) ||
+              (user.id === 986) | (user.id === 123)
+            ) {
+              document.getElementById(
+                "addEmployeeButtonContainer"
+              ).innerHTML = `<button onclick="importExcel()">📥 Import từ Excel</button>
         <button onclick="exportExcel()">📤 Xuất Excel</button>
+                <button onclick="showAddEmployeeModal()">➕ Thêm nhân viên</button>
+              `;
+            }
+          }
+
+          document.addEventListener(
+            "DOMContentLoaded",
+            renderAddEmployeeButton
+          );
+        </script>
+        <div id="addEmployeeButtonContainer"></div>
+
         <!-- <button onclick="connectChecklist()">🔗 Kết nối Checklist</button> -->
-        <button onclick="showAddEmployeeModal()">➕ Thêm nhân viên</button>
       </div>
       <table id="kpi-table">
         <thead>
@@ -218,6 +436,119 @@
       </table>
     </section>
 
+    <!-- Modal Chỉnh sửa Employee -->
+    <div id="editEmployeeModal" class="modal" aria-hidden="true">
+      <div class="modal-content" style="max-width: 800px; margin-top: 30px;">
+        <h2>Chỉnh sửa nhân viên</h2>
+        <form id="editEmployeeForm">
+          <input type="hidden" name="id" />
+          <label>Tên nhân viên:</label>
+          <input type="text" name="name" required />
+          <label>Phòng ban:</label>
+          <select name="department">
+            <option value="IT">IT</option>
+            <option value="Sales">Sales</option>
+            <option value="Marketing">Marketing</option>
+            <option value="HR">HR</option>
+          </select>
+          <label>Vị trí:</label>
+          <input type="text" name="position" required />
+          <div class="input-row">
+            <label>Chất lượng:</label>
+            <input
+              type="number"
+              name="quality"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+            <label>Hiệu suất:</label>
+            <input
+              type="number"
+              name="efficiency"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+          </div>
+          <div class="input-row">
+            <label>Đúng hạn:</label>
+            <input
+              type="number"
+              name="timeliness"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+            <label>Sáng tạo:</label>
+            <input
+              type="number"
+              name="creativity"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+          </div>
+          <div class="input-row">
+            <label>Làm việc nhóm:</label>
+            <input
+              type="number"
+              name="teamwork"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+            <label>Thái độ:</label>
+            <input
+              type="number"
+              name="attitude"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+          </div>
+          <div class="input-row">
+            <label>Kỹ năng:</label>
+            <input
+              type="number"
+              name="skills"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+            <label>Khác:</label>
+            <input
+              type="number"
+              name="other"
+              min="0"
+              max="10"
+              step="0.1"
+              required
+            />
+          </div>
+
+          <label>Ghi chú:</label>
+          <textarea name="notes" rows="3"></textarea>
+          <div class="modal-buttons">
+            <button
+              type="button"
+              class="close-btn"
+              onclick="closeModal('editEmployeeModal')"
+            >
+              Hủy
+            </button>
+            <button type="submit">Lưu</button>
+          </div>
+        </form>
+      </div>
+    </div>
     <!-- Modal Thêm nhân viên mới -->
     <div id="addEmployeeModal" class="modal" aria-hidden="true">
       <div class="modal-content">
@@ -268,12 +599,123 @@
         ></canvas>
       </div>
     </section>
+    <script>
+      function showEditTaskModal(taskId) {
+        const task = tasks.find((t) => t.id === taskId); // Tìm task theo ID
+        if (!task) {
+          alert("Không tìm thấy công việc!");
+          return;
+        }
+
+        const form = document.getElementById("editTaskForm");
+        form.name.value = task.name;
+        form.priority.value = task.priority;
+        form.deadline.value = task.deadline;
+        form.kpi.value = task.kpi;
+        form.weight.value = task.weight;
+        form.notes.value = task.notes;
+        form.id.value = task.id;
+
+        document.getElementById("editTaskModal").style.display = "block";
+      }
+      function showEditEmployeeModal(employee) {
+        const form = document.getElementById("editEmployeeForm");
+        form.name.value = employee.name;
+        form.department.value = employee.department;
+        form.position.value = employee.position;
+        form.notes.value = employee.notes;
+        form.id.value = employee.id;
+        form.quality.value = employee.quality || 0;
+        form.efficiency.value = employee.efficiency || 0;
+        form.timeliness.value = employee.timeliness || 0;
+        form.creativity.value = employee.creativity || 0;
+        form.teamwork.value = employee.teamwork || 0;
+        form.attitude.value = employee.attitude || 0;
+        form.skills.value = employee.skills || 0;
+        form.other.value = employee.other || 0;
+
+        document.getElementById("editEmployeeModal").style.display = "block";
+      }
+      document
+        .getElementById("editTaskForm")
+        .addEventListener("submit", function (e) {
+          e.preventDefault();
+          const formData = new FormData(e.target);
+          const updatedTask = {
+            id: parseInt(formData.get("id")),
+            name: formData.get("name"),
+            priority: formData.get("priority"),
+            deadline: formData.get("deadline"),
+            kpi: parseFloat(formData.get("kpi")),
+            weight: parseInt(formData.get("weight")),
+            status: "Đang thực hiện", // Mặc định là "Đang thực hiện"
+            notes: formData.get("notes"),
+          };
+
+          // Gửi API cập nhật task
+          fetch(api + `updateTask/${updatedTask.id}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(updatedTask),
+          })
+            .then((res) => res.json())
+            .then(() => {
+              loadTasksFromAPI();
+              closeModal("editTaskModal");
+            })
+            .catch((err) => console.error("Lỗi cập nhật task:", err));
+        });
+
+     document
+  .getElementById("editEmployeeForm")
+  .addEventListener("submit", function (e) {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+
+    const updatedEmployee = {
+      id: parseInt(formData.get("id")),
+      name: formData.get("name"),
+      department: formData.get("department"),
+      position: formData.get("position"),
+      quality: parseFloat(formData.get("quality")),
+      efficiency: parseFloat(formData.get("efficiency")),
+      timeliness: parseFloat(formData.get("timeliness")),
+      creativity: parseFloat(formData.get("creativity")),
+      teamwork: parseFloat(formData.get("teamwork")),
+      attitude: parseFloat(formData.get("attitude")),
+      skills: parseFloat(formData.get("skills")),
+      other: parseFloat(formData.get("other")),
+      notes: formData.get("notes"),
+    };
+
+    // Gửi API cập nhật nhân viên
+    fetch(api + `updateEmployee/${updatedEmployee.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(updatedEmployee),
+    })
+      .then((res) => {
+        if (!res.ok) {
+          throw new Error("Lỗi khi cập nhật nhân viên");
+        }
+        return res.json();
+      })
+      .then(() => {
+        loadNVFromAPI(); // Làm mới danh sách nhân viên
+        closeModal("editEmployeeModal"); // Đóng modal
+      })
+      .catch((err) => {
+        console.error("Lỗi cập nhật nhân viên:", err);
+        alert("Không thể cập nhật nhân viên. Vui lòng thử lại.");
+      });
+  });
+    </script>
 
     <script>
       // Global variables
       let tasks = [];
       let employees = [];
-      let api = "http://103.200.23.120:3000/api/quantri/services/";
+      var api = "http://103.200.23.120:3000/api/quantri/services/";
       // Initialize the application
       document.addEventListener("DOMContentLoaded", function () {
         loadTasksFromAPI();
@@ -282,9 +724,11 @@
         renderTasks();
         renderEmployees();
       });
-      document.querySelector(".login-btn").addEventListener("click", function () {
-  document.getElementById("loginModal").style.display = "block";
-});
+      document
+        .querySelector(".login-btn")
+        .addEventListener("click", function () {
+          document.getElementById("loginModal").style.display = "block";
+        });
       // Load sample data
       function loadSampleData() {
         tasks = [
@@ -340,7 +784,6 @@
 
           const result = await response.json();
           const encrypted = decrypt(result);
-          console.log("Decrypted tasks:", encrypted);
 
           // Giả sử API trả về: { success: true, data: [...] }
           tasks = encrypted.data || []; // Chỉ gán nếu data là array
@@ -362,7 +805,6 @@
 
           const result = await response.json();
           const encrypted = decrypt(result);
-          console.log("Decrypted tasks:", encrypted);
 
           // Giả sử API trả về: { success: true, data: [...] }
           employees = encrypted.data || []; // Chỉ gán nếu data là array
@@ -415,6 +857,7 @@
         // Lọc theo trạng thái và ưu tiên
         const filterStatus = document.getElementById("filterStatus").value;
         const filterPriority = document.getElementById("filterPriority").value;
+        console.log(tasks);
 
         tasks.forEach((task, index) => {
           if (
@@ -456,8 +899,12 @@
                             <button onclick="deleteTask(${
                               task.id
                             })" style="background: #e74c3c; font-size: 12px; padding: 5px 10px;">🗑️ Xóa</button>
+                             <button onclick="showEditTaskModal(${
+                               task.id
+                             })" style="background: green; font-size: 12px; padding: 5px 10px;">⚙ Sửa</button>
                         </td>
                     `;
+
             tbody.appendChild(row);
           }
         });
@@ -594,6 +1041,10 @@
                         <td><span class="rating-badge rating-${rating}">${ratingText}</span></td>
                         <td>${employee.notes}</td>
                     `;
+            row.addEventListener("click", () =>
+              showEditEmployeeModal(employee)
+            );
+
             tbody.appendChild(row);
           }
         });
@@ -667,7 +1118,6 @@
               return res.json();
             })
             .then((data) => {
-              console.log("Đã xóa:", data);
               loadTasksFromAPI(); // Gọi lại API để cập nhật danh sách
             })
             .catch((err) => {
@@ -855,7 +1305,6 @@
               return response.json();
             })
             .then((data) => {
-              console.log("Thêm task thành công:", data);
               // Sau khi thêm thành công, gọi lại API để lấy danh sách mới
               loadTasksFromAPI();
               closeModal("addTaskModal");
@@ -1147,75 +1596,94 @@
   .add-task-btn:active {
     transform: translateY(0);
     box-shadow: 0 2px 10px rgba(46, 204, 113, 0.3);
-  } 
-  .header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #fff;
-  padding: 15px 20px;
-  border-bottom: 1px solid #eee;
-  position: relative;
-}
-
-.menu {
-  list-style: none;
+  }
+  .input-row {
   display: flex;
   gap: 20px;
+  align-items: center;
+  margin-bottom: 15px;
 }
 
-.menu li {
-  padding: 10px 15px;
-  border-radius: 8px;
-  background-color: #f5f5f5;
-  cursor: pointer;
-  transition: background 0.3s ease;
+.input-row label {
+  flex: 1;
+  font-size: 14px;
 }
 
-.menu li:hover {
-  background-color: #d0e0ff;
-}
-
-.login-btn {
-  padding: 10px 16px;
-  background-color: #007bff;
-  color: white;
-  border: none;
+.input-row input {
+  flex: 2;
+  padding: 10px;
+  border: 2px solid #ddd;
   border-radius: 6px;
-  cursor: pointer;
-  transition: background 0.3s;
+  font-size: 14px;
 }
-
-.login-btn:hover {
-  background-color: #0056b3;
-}
-
-/* Hamburger */
-.menu-toggle {
-  display: none;
-  font-size: 24px;
-  cursor: pointer;
-}
-
-/* Responsive for mobile */
-@media (max-width: 768px) {
-  .menu {
-    flex-direction: column;
-    position: absolute;
-    top: 60px;
-    left: 0;
-    width: 100%;
-    background-color: #fff;
-    display: none;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-  }
-
-  .menu.show {
+  .header {
     display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #fff;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eee;
+    position: relative;
   }
 
-  .menu-toggle {
-    display: block;
+  .menu {
+    list-style: none;
+    display: flex;
+    gap: 20px;
   }
-}
+
+  .menu li {
+    padding: 10px 15px;
+    border-radius: 8px;
+    background-color: #f5f5f5;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+
+  .menu li:hover {
+    background-color: #d0e0ff;
+  }
+
+  .login-btn {
+    padding: 10px 16px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.3s;
+  }
+
+  .login-btn:hover {
+    background-color: #0056b3;
+  }
+
+  /* Hamburger */
+  .menu-toggle {
+    display: none;
+    font-size: 24px;
+    cursor: pointer;
+  }
+
+  /* Responsive for mobile */
+  @media (max-width: 768px) {
+    .menu {
+      flex-direction: column;
+      position: absolute;
+      top: 60px;
+      left: 0;
+      width: 100%;
+      background-color: #fff;
+      display: none;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    .menu.show {
+      display: flex;
+    }
+
+    .menu-toggle {
+      display: block;
+    }
+  }
 </style>
