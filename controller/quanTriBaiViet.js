@@ -162,6 +162,48 @@ router.post("/services/addEmployee", async (req, res) => {
     res.status(500).json({ error: "Thêm nhân viên thất bại." });
   }
 });
+
+router.post("/services/addEmployeesBatch", async (req, res) => {
+  try {
+    const employees = req.body; // Expecting an array of employee objects
+
+    if (!Array.isArray(employees) || employees.length === 0) {
+      return res.status(400).json({ error: "Dữ liệu không hợp lệ hoặc rỗng." });
+    }
+
+    const sql = `
+      INSERT INTO employees (
+        id, name, department, position,
+        quality, efficiency, timeliness,
+        creativity, teamwork, attitude,
+        skills, other, notes
+      ) VALUES ?
+    `;
+
+    const values = employees.map((employee) => [
+      Math.floor(Math.random() * 100000), // Generate random ID
+      employee.name || "",
+      employee.department || "",
+      employee.position || "",
+      parseFloat(employee.quality) || 0,
+      parseFloat(employee.efficiency) || 0,
+      parseFloat(employee.timeliness) || 0,
+      parseFloat(employee.creativity) || 0,
+      parseFloat(employee.teamwork) || 0,
+      parseFloat(employee.attitude) || 0,
+      parseFloat(employee.skills) || 0,
+      parseFloat(employee.other) || 0,
+      employee.notes || "",
+    ]);
+
+    await db.promise().query(sql, [values]);
+
+    res.json({ message: "Thêm nhân viên hàng loạt thành công!" });
+  } catch (err) {
+    console.error("Lỗi khi thêm nhân viên hàng loạt:", err);
+    res.status(500).json({ error: "Thêm nhân viên hàng loạt thất bại." });
+  }
+});
 router.delete("/services/deleteEmployee/:id", (req, res) => {
   const id = req.params.id;
   const sql = `DELETE FROM employees WHERE id = ?`;
