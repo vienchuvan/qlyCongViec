@@ -97,7 +97,7 @@
                 sessionStorage.setItem("user", JSON.stringify(data.user));
                 alert("Đăng nhập thành công!");
                 closeModal("loginModal");
-                window.location.reload();
+            //    window.location.reload();
                 updateUIAfterLogin();
               } else {
                 alert("Đăng nhập thất bại. Vui lòng thử lại.");
@@ -127,7 +127,7 @@
       function logout() {
         sessionStorage.removeItem("user");
         alert("Đăng xuất thành công!");
-        location.reload();
+        updateUIAfterLogin(); 
       }
 
       // Kiểm tra trạng thái đăng nhập khi tải trang
@@ -1107,7 +1107,8 @@
             })
             .then(() => {
               alert("Xóa nhân viên thành công!");
-              window.location.reload(); // Làm mới trang để cập nhật danh sách
+            //  window.location.reload(); // Làm mới trang để cập nhật danh sách
+            loadNVFromAPI();
             })
             .catch((err) => {
               console.error("Lỗi xóa nhân viên:", err);
